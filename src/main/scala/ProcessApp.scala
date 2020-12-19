@@ -6,24 +6,23 @@ object ProcessApp extends App {
 
   val codigoDinamico =
     """
-      def hello_world(String name){
-        def get = new URL("https://httpbin.org/get").openConnection();
+      def hello_world(String id){
+        def get = new URL("https://jsonplaceholder.typicode.com/comments?postId="+id).openConnection();
         def getRC = get.getResponseCode();
-        println(getRC);
         if(getRC.equals(200)) {
-            println(get.getInputStream().getText());
+            return (get.getInputStream().getText());
         }
-        println 'Hello '+name
+        return '[]'
       };
 
-      hello_world(parametroDinamico);
+      return hello_world(parametroDinamico);
       """
   val binding = new Binding()
-  binding.setVariable("parametroDinamico", "Diego Ferreira da Silva")
+  binding.setVariable("parametroDinamico", "2")
 
   val shell = new GroovyShell(binding);
   Try(shell.evaluate(codigoDinamico)) match {
-    case Success(value) => print("Sucesso na execucao")
+    case Success(value) => print(s"Sucesso na execucao: ${value}")
     case Failure(exception) => print(s"Problema na execucao ${exception.getMessage}")
   }
 
