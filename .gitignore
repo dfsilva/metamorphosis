@@ -30,5 +30,4 @@ build
 
 #general
 *.class
-
-.bsp
+cassandra/
