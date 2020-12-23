@@ -1,4 +1,4 @@
-package proccess
+package br.com.diego.processor.proccess
 
 import groovy.lang.{Binding, GroovyShell}
 

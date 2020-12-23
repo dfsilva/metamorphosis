@@ -1,7 +1,4 @@
-version: "3.3"
-
-# make sure that docker machine has enough memory to run the cluster.
-# setting it up to 4GB seems to work.
+version: "3.5"
 
 services:
   cassandra-seed:
@@ -17,42 +14,56 @@ services:
       - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
   #    restart: always
 
-#  cassandra1:
-#    image: cassandra:latest
-#    volumes:
-#      - "cassandra_data_1:/var/lib/cassandra"
-#    environment:
-#      - "CASSANDRA_SEEDS=cassandra-seed"
-#      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-#      #      needed for setting up custom cluster name
-#      - "CASSANDRA_DC=se1"
-#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-#    depends_on:
-#      - cassandra-seed
-#  #    restart: always
-#
-#  cassandra2:
-#    image: cassandra:latest
-#    volumes:
-#      - "cassandra_data_2:/var/lib/cassandra"
-#    environment:
-#      - "CASSANDRA_SEEDS=cassandra-seed"
-#      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-#      #      needed for setting up custom cluster name
-#      - "CASSANDRA_DC=se1"
-#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-#    depends_on:
-#      - cassandra-seed
-#  #    restart: always
+  #  cassandra1:
+  #    image: cassandra:latest
+  #    volumes:
+  #      - "cassandra_data_1:/var/lib/cassandra"
+  #    environment:
+  #      - "CASSANDRA_SEEDS=cassandra-seed"
+  #      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
+  #      #      needed for setting up custom cluster name
+  #      - "CASSANDRA_DC=se1"
+  #      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+  #    depends_on:
+  #      - cassandra-seed
+  #  #    restart: always
+  #
+  #  cassandra2:
+  #    image: cassandra:latest
+  #    volumes:
+  #      - "cassandra_data_2:/var/lib/cassandra"
+  #    environment:
+  #      - "CASSANDRA_SEEDS=cassandra-seed"
+  #      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
+  #      #      needed for setting up custom cluster name
+  #      - "CASSANDRA_DC=se1"
+  #      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+  #    depends_on:
+  #      - cassandra-seed
+  #  #    restart: always
 
   nats:
-    image: 'nats'
-    expose:
-      - "4222"
+    image: nats-streaming
     ports:
+      - "4222:4222"
       - "8222:8222"
-    hostname: nats-server
+    networks: [ "br.com.diego.processor.nats" ]
+#  br.com.diego.processor.nats-1:
+#    image: br.com.diego.processor.nats
+#    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
+#    networks: [ "br.com.diego.processor.nats" ]
+#    depends_on: [ "br.com.diego.processor.nats" ]
+#  br.com.diego.processor.nats-2:
+#    image: br.com.diego.processor.nats
+#    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
+#    networks: [ "br.com.diego.processor.nats" ]
+#    depends_on: [ "br.com.diego.processor.nats" ]
+
 volumes:
   cassandra_data_seed:
   cassandra_data_1:
   cassandra_data_2:
+
+networks:
+  nats:
+    name: br.com.diego.processor.nats

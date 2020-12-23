@@ -1,11 +1,14 @@
+package br.com.diego.processor
+
 import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior}
-import api.{Routes, Server}
+import br.com.diego.processor.actors.ProcessorActor
+import br.com.diego.processor.api.{Routes, Server}
 import com.typesafe.config.ConfigFactory
 
 object Main extends App {
-  val system = ActorSystem[Done](Guardian(), "NatsProcessorSystem", ConfigFactory.load)
+  val system = ActorSystem[Done](Guardian(), "NatsMessageSystem", ConfigFactory.load)
 }
 
 object Guardian {
@@ -13,6 +16,8 @@ object Guardian {
     Behaviors.setup[Done] { context =>
       implicit val system = context.system.classicSystem
       val httpPort = context.system.settings.config.getInt("server.http.port")
+
+      ProcessorActor.init(context.system)
 
       val routes = new Routes(context.system)
       new Server(routes.routes, httpPort, context.system).start()

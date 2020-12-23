@@ -1,4 +1,4 @@
-package api
+package br.com.diego.processor.api
 
 import akka.actor.CoordinatedShutdown
 import akka.actor.typed.ActorSystem

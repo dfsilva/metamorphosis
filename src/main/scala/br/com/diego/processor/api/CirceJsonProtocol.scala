@@ -1,4 +1,4 @@
-package api
+package br.com.diego.processor.api
 
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
