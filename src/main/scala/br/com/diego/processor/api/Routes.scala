@@ -47,7 +47,7 @@ class Routes(system: ActorSystem[_]) extends FailFastCirceSupport with CirceJson
                   get {
                     pathPrefix(Segment) { id: String =>
                       val entityRef = sharding.entityRefFor(ProcessorActor.EntityKey, id)
-                      onSuccess(entityRef.ask(ProcessorActor.GetStatus)) { response =>
+                      onSuccess(entityRef.ask(ProcessorActor.GetProcessor)) { response =>
                         complete(response)
                       }
                     }
@@ -55,7 +55,7 @@ class Routes(system: ActorSystem[_]) extends FailFastCirceSupport with CirceJson
                   post {
                     entity(as[MessageRequest]) { data =>
                       val entityRef = sharding.entityRefFor(ProcessorActor.EntityKey, s"${data.fromQueue}_${data.toQueue}")
-                      val reply: Future[StatusReply[ProcessorActor.Response]] = entityRef.ask(ProcessorActor.SetValues(data.code, data.fromQueue, data.toQueue, _))
+                      val reply: Future[StatusReply[ProcessorActor.Response]] = entityRef.ask(ProcessorActor.SetProcessor(data.code, data.fromQueue, data.toQueue, _))
                       onSuccess(reply) {
                         case StatusReply.Success(response: ProcessorActor.Response) => complete(StatusCodes.OK -> response.message)
                         case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)

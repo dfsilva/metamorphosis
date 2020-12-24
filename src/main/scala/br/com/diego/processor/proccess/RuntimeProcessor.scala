@@ -4,11 +4,11 @@ import groovy.lang.{Binding, GroovyShell}
 
 import scala.util.Try
 
-object Processor {
-  def apply(code: String) = new Processor(code)
+object RuntimeProcessor {
+  def apply(code: String) = new RuntimeProcessor(code)
 }
 
-class Processor(code: String) {
+class RuntimeProcessor(code: String) {
   def process: Try[Any] = {
         val codigoDinamico =
             """
@@ -25,14 +25,8 @@ class Processor(code: String) {
               """
     val binding = new Binding()
     binding.setVariable("parametroDinamico", "2")
-
     val shell = new GroovyShell(binding)
     Try(shell.evaluate(code))
-
-    //    match {
-    //      case Success(value) => value.toString
-    //      case Failure(exception) => exception.getMessage
-    //    }
   }
 
 }

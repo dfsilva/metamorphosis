@@ -5,8 +5,6 @@ import java.text.SimpleDateFormat
 import io.circe.Decoder.Result
 import io.circe.{Decoder, Encoder, HCursor, Json}
 
-import scala.reflect.ClassTag.{Any, AnyVal}
-
 trait CirceJsonProtocol {
 
 //  implicit val genderDecoder: Decoder[TipoUsuario.Value] = Decoder.decodeEnumeration(TipoUsuario)
