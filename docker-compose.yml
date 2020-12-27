@@ -47,9 +47,9 @@ services:
     ports:
       - "4222:4222"
       - "8222:8222"
-    networks: [ "br.com.diego.processor.nats" ]
-#  br.com.diego.processor.nats-1:
-#    image: br.com.diego.processor.nats
+    networks: [ "nats" ]
+#  nats-1:
+#    image: nats
 #    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
 #    networks: [ "br.com.diego.processor.nats" ]
 #    depends_on: [ "br.com.diego.processor.nats" ]
@@ -66,4 +66,4 @@ volumes:
 
 networks:
   nats:
-    name: br.com.diego.processor.nats
+    name: nats

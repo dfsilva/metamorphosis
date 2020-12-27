@@ -1,7 +1,7 @@
 <configuration>
     <appender name="STDOUT" target="System.out" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%date{ISO8601}] [%level] [%logger] [%marker] [%thread] - %msg {%mdc}%n</pattern>
+            <pattern>[%date{ISO8601}] [%marker] - %msg {%mdc}%n</pattern>
         </encoder>
     </appender>
 
@@ -14,7 +14,8 @@
 
     <logger name="com.datastax.driver.core.Connection" level="ERROR"/>
     <logger name="com.codahale.metrics" level="ERROR"/>
-    <logger name="akka" level="TRACE"/>
+    <logger name="akka" level="ERROR"/>
+    <logger name="br.com.diego" level="INFO"/>
 
     <appender name="ASYNCFILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>8192</queueSize>
@@ -28,7 +29,7 @@
         <appender-ref ref="STDOUT"/>
     </appender>
 
-    <root level="TRACE">
+    <root level="WARN">
         <appender-ref ref="ASYNCFILE"/>
         <appender-ref ref="ASYNCSTDOUT"/>
     </root>
