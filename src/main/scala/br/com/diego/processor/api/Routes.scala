@@ -57,7 +57,7 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
         cors() {
           pathPrefix("api") {
             concat(
-              pathPrefix("processor") {
+              pathPrefix("agent") {
                 concat(
                   get {
                     pathPrefix(Segment) { id: String =>
@@ -77,7 +77,7 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
                   post {
                     entity(as[AddAgent]) { data =>
                       val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
-                        processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description, data.code, data.from, data.to, _))
+                        processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description.orNull, data.code, data.from, data.to, _))
                       onSuccess(reply) {
                         case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
                         case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)

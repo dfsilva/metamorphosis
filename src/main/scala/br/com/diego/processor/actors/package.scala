@@ -22,10 +22,10 @@ package object domains {
                                from: String,
                                to: String,
                                status: String = Status.Active,
-                               waiting: Queue[TopicMessage],
-                               processing: Map[String, TopicMessage],
-                               error: Queue[TopicMessage],
-                               success: Map[String, TopicMessage]) extends CborSerializable
+                               waiting: Queue[TopicMessage] = Queue(),
+                               processing: Map[String, TopicMessage] = Map(),
+                               error: Queue[TopicMessage] = Queue(),
+                               success: Map[String, TopicMessage] = Map()) extends CborSerializable
 
 
   final case class TopicMessage(id: String = "", content: String, result: Option[String] = None) extends CborSerializable

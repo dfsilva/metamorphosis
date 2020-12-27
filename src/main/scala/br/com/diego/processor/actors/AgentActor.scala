@@ -99,16 +99,22 @@ object AgentActor {
           case Success(result) => {
             log.info(s"Processado com sucesso $result")
             Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result))))
+              .thenReply(wsUserTopic)(updated => {
+                Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
+              })
           }
           case Failure(error) => {
             log.error(s"Processado com falha ${error.getMessage}")
             Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
+              .thenReply(wsUserTopic)(updated => {
+                Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
+              })
           }
         }
       }
       case SendCurrentDetails() => {
         log.info(s"Enviando notificacao para usuairo")
-        wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.asJson, action = "set-agent-detail")))
+        wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.agent.asJson, action = "set-agent-detail")))
         Effect.none
       }
     }
@@ -118,7 +124,7 @@ object AgentActor {
     event match {
       case Created(agent) => state.setAgent(agent)
       case ProcessedSuccessfull(message) => state.copy(agent = state.agent.copy(success = state.agent.success + (message.id -> message)))
-      case ProcessedFailure(message, error) => state.copy(agent = state.agent.copy(error = state.agent.error :+ message))
+      case ProcessedFailure(message, error) => state.copy(agent = state.agent.copy(error = (state.agent.error :+ message)))
     }
   }
 
