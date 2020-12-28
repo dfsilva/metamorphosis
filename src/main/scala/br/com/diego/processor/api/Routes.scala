@@ -22,7 +22,7 @@ import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
-class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActor.Command], wsConCreator: ActorRef[WsUserFactoryActor.Command])
+class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.Command])
   extends FailFastCirceSupport with CirceJsonProtocol {
 
   import akka.http.scaladsl.server._
@@ -68,7 +68,8 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
                     }
                   },
                   get {
-                    val reply: Future[StatusReply[ActorResponse[Seq[ScriptAgent]]]] = processorManager.ask(AgentManagerActor.Show(_))
+                    val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
+                    val reply: Future[StatusReply[ActorResponse[Seq[String]]]] = processorManager.ask(AgentManagerActor.Show(_))
                     onSuccess(reply) {
                       case StatusReply.Success(response: ActorResponse[Seq[ScriptAgent]]) => complete(StatusCodes.OK -> response.body)
                       case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
@@ -76,6 +77,7 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
                   },
                   post {
                     entity(as[AddAgent]) { data =>
+                      val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
                       val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
                         processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description.orNull, data.code, data.from, data.to, _))
                       onSuccess(reply) {
@@ -84,6 +86,19 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
                       }
                     }
                   },
+                  pathPrefix(Segment) { uuid =>
+                    post {
+                      entity(as[UpdateAgent]) { data =>
+                        val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
+                        val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
+                          processorManager.ask(AgentManagerActor.UpdateAgent(data.uuid, data.title, data.description.orNull, data.code, data.to, _))
+                        onSuccess(reply) {
+                          case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
+                          case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
+                        }
+                      }
+                    }
+                  }
                 )
               },
 
@@ -114,7 +129,7 @@ class Routes(system: ActorSystem[_], processorManager: ActorRef[AgentManagerActo
     import io.circe.generic.auto._
     import io.circe.syntax._
 
-    val wsConCreated: WsUserFactoryActor.Created = Await.result(wsConCreator.ask(replyTo => WsUserFactoryActor.CreateWsCon(replyTo, processorManager)), 2.seconds)
+    val wsConCreated: WsUserFactoryActor.Created = Await.result(wsConCreator.ask(replyTo => WsUserFactoryActor.CreateWsCon(replyTo)), 2.seconds)
     val wsUser = wsConCreated.userActor
 
     val sink: Sink[Message, NotUsed] =

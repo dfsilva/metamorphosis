@@ -32,5 +32,4 @@ package object domains {
 
   final case class ActorResponse[T](body: T) extends CborSerializable
 
-
 }

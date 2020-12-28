@@ -10,15 +10,15 @@ object WsUserFactoryActor {
 
   sealed trait Response extends Command
 
-  final case class CreateWsCon(replyTo: ActorRef[Created], processorManager: ActorRef[AgentManagerActor.Command]) extends Command
+  final case class CreateWsCon(replyTo: ActorRef[Created]) extends Command
 
   final case class Created(userActor: ActorRef[WsUserActor.Command]) extends Response
 
   def apply(): Behavior[Command] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage[Command] {
-        case CreateWsCon(replyTo, processorManager) =>
-          val userWsCon: ActorRef[WsUserActor.Command] = context.spawnAnonymous(WsUserActor(processorManager))
+        case CreateWsCon(replyTo) =>
+          val userWsCon: ActorRef[WsUserActor.Command] = context.spawnAnonymous(WsUserActor())
           replyTo.tell(Created(userWsCon))
           Behaviors.same
       }

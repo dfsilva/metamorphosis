@@ -1,7 +1,7 @@
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 def object = new JsonSlurper().parseText(message)
-object.sobrenome = "Ferreira da Silva"
+object.propriedadeExtra = "Propriedade Extra Adicionada"
 return JsonOutput.toJson(object)
 
 

@@ -2,14 +2,13 @@ package br.com.diego.processor.actors
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SupervisorStrategy}
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityTypeKey}
-import akka.cluster.typed.{ClusterSingleton, SingletonActor}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import akka.util.Timeout
 import br.com.diego.processor.CborSerializable
-import br.com.diego.processor.actors.AgentActor.ResponseCreated
+import br.com.diego.processor.actors.AgentActor.{ResponseCreated, ResponseUpdated}
 import br.com.diego.processor.domains.{ActorResponse, ScriptAgent}
 import org.slf4j.LoggerFactory
 
@@ -27,7 +26,7 @@ object AgentManagerActor {
     val empty = State()
   }
 
-  final case class State(agents: Seq[ScriptAgent] = Seq()) extends CborSerializable
+  final case class State(agents: Seq[String] = Seq()) extends CborSerializable
 
   sealed trait Command extends CborSerializable
 
@@ -35,9 +34,11 @@ object AgentManagerActor {
 
   final case class AddAgent(title: String, description: String, script: String, from: String, to: String, replyTo: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
 
+  final case class UpdateAgent(uuid: String, title: String, description: String, script: String, to: String, replyTo: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
+
   final case class ProcessMessageResponse(response: AgentActor.Command) extends Command
 
-  final case class Show(replyTo: ActorRef[StatusReply[ActorResponse[Seq[ScriptAgent]]]]) extends Command
+  final case class Show(replyTo: ActorRef[StatusReply[ActorResponse[Seq[String]]]]) extends Command
 
   final object NotifyAgentDetails extends Command
 
@@ -45,12 +46,14 @@ object AgentManagerActor {
 
   final case class ProcessorAdded(processor: ScriptAgent) extends Event
 
+  final case class AgentUpdated(agent: ScriptAgent) extends Event
+
   val EntityKey: EntityTypeKey[Command] = EntityTypeKey[Command](_ID)
 
-  def init(system: ActorSystem[_]): ActorRef[Command] = {
-    ClusterSingleton(system).init(
-      SingletonActor(Behaviors.supervise(AgentManagerActor()).onFailure[Exception](SupervisorStrategy.restart), _ID)
-    )
+  def init(system: ActorSystem[_]): Unit = {
+    ClusterSharding(system).init(Entity(EntityKey) { entityContent =>
+      Behaviors.supervise(AgentManagerActor()).onFailure[Exception](SupervisorStrategy.restart)
+    })
   }
 
   def apply(): Behavior[Command] = {
@@ -87,9 +90,15 @@ object AgentManagerActor {
           .copy(uuid = uuid, title = title, description = description, code = code, from = from, to = to), response, replyTo)
         Effect.none
       }
+      case UpdateAgent(uuid, title, description, code, to, replyTo) => {
+        val entityRef = sharding.entityRefFor(AgentActor.EntityKey, uuid)
+        entityRef ! AgentActor.Update(agent = ScriptAgent.empty
+          .copy(uuid = uuid, title = title, description = description, code = code, to = to), response, replyTo)
+        Effect.none
+      }
       case NotifyAgentDetails => {
         state.agents.foreach(pw => {
-          val entityRef = sharding.entityRefFor(AgentActor.EntityKey, pw.uuid)
+          val entityRef = sharding.entityRefFor(AgentActor.EntityKey, pw)
           entityRef ! AgentActor.SendCurrentDetails()
         })
         Effect.none
@@ -104,13 +113,19 @@ object AgentManagerActor {
                 StatusReply.success(ActorResponse[ScriptAgent](scriptAgent))
               })
           }
+          case ResponseUpdated(uuid, agentUpdated, replyTo) => {
+            Effect.persist(AgentUpdated(agentUpdated))
+              .thenReply(replyTo)(updated => {
+                StatusReply.success(ActorResponse[ScriptAgent](agentUpdated))
+              })
+          }
         }
     }
   }
 
   def _start(state: State, sharding: ClusterSharding): Effect[Event, State] = {
     state.agents.foreach(pw => {
-      val entityRef = sharding.entityRefFor(AgentActor.EntityKey, pw.uuid)
+      val entityRef = sharding.entityRefFor(AgentActor.EntityKey, pw)
       entityRef ! AgentActor.Start()
     })
     Effect.none
@@ -118,7 +133,8 @@ object AgentManagerActor {
 
   private def handlerEvent(state: State, event: Event): State = {
     event match {
-      case ProcessorAdded(agent) => state.copy(agents = state.agents :+ agent)
+      case ProcessorAdded(agent) => state.copy(agents = state.agents :+ agent.uuid)
+      case AgentUpdated(agent) => state.copy(agents = state.agents.filter(_ != agent.uuid) :+ agent.uuid)
     }
   }
 

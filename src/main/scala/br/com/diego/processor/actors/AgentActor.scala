@@ -11,7 +11,7 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionC
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, ScriptAgent, TopicMessage}
-import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
+import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher, NatsSubscriber}
 import br.com.diego.processor.proccess.RuntimeProcessor
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -38,7 +38,13 @@ object AgentActor {
 
   final case class Create(agent: ScriptAgent, replyTo: ActorRef[Command], replyTo2: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
 
+  final case class Update(agent: ScriptAgent, replyTo: ActorRef[Command], replyTo2: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
+
+
   final case class ResponseCreated(uuid: String, agent: ScriptAgent, replyTo: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
+
+  final case class ResponseUpdated(uuid: String, agent: ScriptAgent, replyTo: ActorRef[StatusReply[ActorResponse[ScriptAgent]]]) extends Command
+
 
   final case class UpdateScriptCode(code: String, replyTo: ActorRef[StatusReply[ActorResponse[String]]]) extends Command
 
@@ -54,6 +60,8 @@ object AgentActor {
 
   final case class Created(agent: ScriptAgent) extends Event
 
+  final case class Updated(agent: ScriptAgent) extends Event
+
   final case class ProcessedFailure(msg: TopicMessage, error: Throwable) extends Event
 
   final case class ProcessedSuccessfull(msg: TopicMessage) extends Event
@@ -62,7 +70,8 @@ object AgentActor {
 
   def init(system: ActorSystem[_]): Unit = {
     ClusterSharding(system).init(Entity(EntityKey) { entityContent =>
-      AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection())
+      Behaviors.supervise(AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection())).onFailure[Exception](SupervisorStrategy.restart)
+      //      AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection())
     })
   }
 
@@ -86,11 +95,14 @@ object AgentActor {
     command match {
       case Create(agent, replyTo, replyTo2) =>
         Effect.persist(Created(agent))
-          .thenReply(replyTo)(updated => ResponseCreated(uuid, agent, replyTo2))
+          .thenReply(replyTo)(updated => ResponseCreated(uuid, updated.agent, replyTo2))
+      case Update(agent, replyTo, replyTo2) =>
+        Effect.persist(Updated(agent))
+          .thenReply(replyTo)(updated => ResponseUpdated(uuid, updated.agent, replyTo2))
       case GetDetails(replyTo) => Effect.reply(replyTo)(ActorResponse(state.agent.asJson.noSpaces))
       case Start() => {
         log.info(s"Inicializando Subscriber $uuid")
-        NatsSubscriber(streamingConnection, state.agent.from, uuid, context.self)
+        NatsSubscriber(streamingConnection, state.agent.from, uuid, context.system)
         Effect.none
       }
       case Process(message) => {
@@ -100,6 +112,7 @@ object AgentActor {
             log.info(s"Processado com sucesso $result")
             Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result))))
               .thenReply(wsUserTopic)(updated => {
+                NatsPublisher(streamingConnection, state.agent.to, result)
                 Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
               })
           }
@@ -123,6 +136,7 @@ object AgentActor {
   private def handlerEvent(state: State, event: Event): State = {
     event match {
       case Created(agent) => state.setAgent(agent)
+      case Updated(agent) => state.setAgent(state.agent.copy(title = agent.title, description = agent.description, code = agent.code, to = agent.to))
       case ProcessedSuccessfull(message) => state.copy(agent = state.agent.copy(success = state.agent.success + (message.id -> message)))
       case ProcessedFailure(message, error) => state.copy(agent = state.agent.copy(error = (state.agent.error :+ message)))
     }
