@@ -79,7 +79,7 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                     entity(as[AddAgent]) { data =>
                       val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
                       val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
-                        processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description.orNull, data.code, data.from, data.to, _))
+                        processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description.orNull, data.code, data.from, data.to.getOrElse(""), _))
                       onSuccess(reply) {
                         case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
                         case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
@@ -91,7 +91,7 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                       entity(as[UpdateAgent]) { data =>
                         val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
                         val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
-                          processorManager.ask(AgentManagerActor.UpdateAgent(data.uuid, data.title, data.description.orNull, data.code, data.to, _))
+                          processorManager.ask(AgentManagerActor.UpdateAgent(data.uuid, data.title, data.description.orNull, data.code, data.to.getOrElse(""), _))
                         onSuccess(reply) {
                           case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
                           case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)

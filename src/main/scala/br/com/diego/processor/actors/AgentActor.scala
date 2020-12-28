@@ -112,7 +112,8 @@ object AgentActor {
             log.info(s"Processado com sucesso $result")
             Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result))))
               .thenReply(wsUserTopic)(updated => {
-                NatsPublisher(streamingConnection, state.agent.to, result)
+                if(!state.agent.to.isBlank)
+                  NatsPublisher(streamingConnection, state.agent.to, result)
                 Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
               })
           }

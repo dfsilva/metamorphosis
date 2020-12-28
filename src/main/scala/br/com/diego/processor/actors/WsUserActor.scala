@@ -13,8 +13,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 object WsUserActor {
 
-  private val log: Logger = LoggerFactory.getLogger(WsUserActor.getClass)
-
   val TopicName: String = "notify_user"
 
   sealed trait Command extends CborSerializable
