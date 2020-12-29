@@ -20,11 +20,5 @@ trait CirceJsonProtocol {
     override def apply(c: HCursor): Result[java.sql.Date] = Decoder.decodeString.map(s => new java.sql.Date(new SimpleDateFormat("dd/MM/yyyy").parse(s).getTime)).apply(c)
   }
 
-//  implicit val AnyDecoder: Encoder[Any] = new Encoder[Any] {
-//    override def apply(a: Any): Json = Encoder.encodeString.apply(a.toString)
-//  }
-
-//  implicit val wsMessageDecoder: Decoder[WsMessage] = deriveDecoder[WsMessage]
-
 }
 

@@ -20,7 +20,7 @@ object Guardian {
 
       AgentActor.init(context.system)
       AgentManagerActor.init(context.system)
-      ClusterSharding(context.system).entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID) ! AgentManagerActor.Start()
+      ClusterSharding(context.system).entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID) ! AgentManagerActor.StartSubscribers()
 
       val wsConCreatorRef = context.spawn(WsUserFactoryActor(), "wsConCreator")
 

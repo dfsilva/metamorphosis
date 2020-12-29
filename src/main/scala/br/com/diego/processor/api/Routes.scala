@@ -15,7 +15,7 @@ import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
 import akka.util.Timeout
 import br.com.diego.processor.actors.WsUserActor._
 import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, WsUserActor, WsUserFactoryActor}
-import br.com.diego.processor.domains.{ActorResponse, ScriptAgent}
+import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 
@@ -67,33 +67,51 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                       }
                     }
                   },
-                  get {
-                    val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
-                    val reply: Future[StatusReply[ActorResponse[Seq[String]]]] = processorManager.ask(AgentManagerActor.Show(_))
-                    onSuccess(reply) {
-                      case StatusReply.Success(response: ActorResponse[Seq[ScriptAgent]]) => complete(StatusCodes.OK -> response.body)
-                      case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
-                    }
-                  },
                   post {
-                    entity(as[AddAgent]) { data =>
+                    entity(as[AddUpdateAgent]) { data =>
                       val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
-                      val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
-                        processorManager.ask(AgentManagerActor.AddAgent(data.title, data.description.orNull, data.code, data.from, data.to.getOrElse(""), _))
+
+                      val reply: Future[StatusReply[ActorResponse[AgentState]]] = processorManager.ask(AgentManagerActor.AddUpdateAgent(
+                        AgentState(
+                          uuid = None,
+                          title = data.title,
+                          description = data.description,
+                          transformerScript = data.transformerScript,
+                          conditionScript = data.conditionScript,
+                          from = data.from,
+                          to = data.to,
+                          to2 = data.to2,
+                          agentType = data.agentType,
+                          ordered = data.ordered
+                        ), _))
+
                       onSuccess(reply) {
-                        case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
+                        case StatusReply.Success(response: ActorResponse[AgentState]) => complete(StatusCodes.OK -> response.body)
                         case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
                       }
                     }
                   },
                   pathPrefix(Segment) { uuid =>
                     post {
-                      entity(as[UpdateAgent]) { data =>
+                      entity(as[AddUpdateAgent]) { data =>
                         val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
-                        val reply: Future[StatusReply[ActorResponse[ScriptAgent]]] =
-                          processorManager.ask(AgentManagerActor.UpdateAgent(data.uuid, data.title, data.description.orNull, data.code, data.to.getOrElse(""), _))
+                        val reply: Future[StatusReply[ActorResponse[AgentState]]] =
+                          processorManager.ask(AgentManagerActor.AddUpdateAgent(
+                            AgentState(
+                              uuid = Some(uuid),
+                              title = data.title,
+                              description = data.description,
+                              transformerScript = data.transformerScript,
+                              conditionScript = data.conditionScript,
+                              from = data.from,
+                              to = data.to,
+                              to2 = data.to2,
+                              agentType = data.agentType,
+                              ordered = data.ordered
+                            ), _))
+
                         onSuccess(reply) {
-                          case StatusReply.Success(response: ActorResponse[ScriptAgent]) => complete(StatusCodes.OK -> response.body)
+                          case StatusReply.Success(response: ActorResponse[AgentState]) => complete(StatusCodes.OK -> response.body)
                           case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
                         }
                       }

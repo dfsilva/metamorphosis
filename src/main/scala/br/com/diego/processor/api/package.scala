@@ -6,9 +6,16 @@ import java.util.UUID
 
 package object api {
 
-  case class UpdateAgent(uuid: String, title: String, description: Option[String], code: String, to: Option[String]) extends CborSerializable
+  case class AddUpdateAgent(title: String,
+                            description: Option[String],
+                            transformerScript: String,
+                            conditionScript: Option[String],
+                            from: String,
+                            to: Option[String],
+                            to2: Option[String],
+                            agentType: String,
+                            ordered: Boolean) extends CborSerializable
 
-  case class AddAgent(title: String, description: Option[String], code: String, from: String, to: Option[String]) extends CborSerializable
 
   case class PublishNats(topic: String, content: String) extends CborSerializable
 
