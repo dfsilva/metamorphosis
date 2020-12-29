@@ -22,14 +22,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
-    this._agent = widget.agent ?? Agent(code: "def messageToBeProcessed = message");
+    this._agent = widget.agent ?? Agent(transformerScript: "def messageToBeProcessed = message");
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Add Agent"),
+        title: Text("Agent"),
       ),
       body: Column(
         children: [
@@ -71,10 +71,27 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: DropdownButtonFormField(
+                        value: this._agent.agentType,
+                        items: <DropdownMenuItem>[
+                          DropdownMenuItem(value: "D", child: Text("Default")),
+                          DropdownMenuItem(value: "C", child: Text("Conditional"))
+                        ],
+                        onChanged: (value){
+                          setState(() {
+                            this._agent = this._agent.copyWith(agentType: value);
+                          });
+                        },
+                        onSaved: (type) {
+                          this._agent = this._agent.copyWith(agentType: type);
+                        }
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: TextFormField(
                         keyboardType: TextInputType.text,
                         initialValue: _agent.from,
-                        enabled: _agent.uuid == null,
                         validator: (from) {
                           if (from.isEmpty) {
                             return "Provide from queue";
@@ -99,18 +116,48 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         decoration: InputDecoration(hintText: "to topic", labelText: "to"),
                       ),
                     ),
+                    (_agent.agentType == "C")
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            child: CodeEditor(
+                                model: EditorModel(
+                                  files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.conditionScript)],
+                                  styleOptions: new EditorModelStyleOptions(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                disableNavigationbar: false,
+                                onSubmit: (String language, String value) {
+                                  this._agent = this._agent.copyWith(conditionScript: value);
+                                }),
+                          )
+                        : SizedBox.shrink(),
+                    (_agent.agentType == "C")
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            child: TextFormField(
+                              keyboardType: TextInputType.text,
+                              autofocus: true,
+                              initialValue: _agent.to2,
+                              onSaved: (to2) {
+                                this._agent = this._agent.copyWith(to2: to2);
+                              },
+                              decoration: InputDecoration(hintText: "to topic 1", labelText: "to topic 1"),
+                            ),
+                          )
+                        : SizedBox.shrink(),
                     Padding(
                         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                         child: CodeEditor(
                             model: EditorModel(
-                              files: [FileEditor(name: "Groovy Script", language: "java", code: _agent.code)],
+                              files: [FileEditor(name: "Transformation Script", language: "java", code: _agent.transformerScript)],
                               styleOptions: new EditorModelStyleOptions(
                                 fontSize: 13,
                               ),
                             ),
                             disableNavigationbar: false,
                             onSubmit: (String language, String value) {
-                              this._agent = this._agent.copyWith(code: value);
+                              this._agent = this._agent.copyWith(transformerScript: value);
                             })),
                   ],
                 )),

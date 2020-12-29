@@ -6,6 +6,7 @@ import 'package:nats_message_processor_client/utils/message.dart';
 
 class Api {
   static const String HOST = "127.0.0.1:8081";
+  // static const String HOST = "192.168.31.9:8081";
   static const String _URL = "http://$HOST/api";
 
   static handleError(error) {
@@ -59,20 +60,6 @@ class Api {
     }
   }
 
-  // static Future<dynamic> doPut({String url = _URL, String uri, Map<String, dynamic> bodyParams = const {}}) async {
-  //   print(url + uri);
-  //   String currentToken = await _getUserToken();
-  //   return _dio
-  //       .put(url + uri, data: bodyParams, options: Options(headers: {"Content-Type": "application/json", "Authorization": "Token $currentToken"}))
-  //       .then((response) {
-  //     if (response.statusCode == 200) {
-  //       return response.data;
-  //     } else {
-  //       throw Exception(response.statusMessage);
-  //     }
-  //   }).catchError(handleError);
-  // }
-
   static Future<dynamic> doGet({String url = _URL, String uri, Map<String, dynamic> params = const {}}) async {
     print(url + uri);
     String currentToken = await _getUserToken();
@@ -87,20 +74,6 @@ class Api {
       handleError(Exception(response.body));
     }
   }
-
-  // static Future<dynamic> doDelete({String url = _URL, String uri, Map<String, dynamic> params = const {}}) async {
-  //   String currentToken = await _getUserToken();
-  //   return _dio
-  //       .delete(url + uri,
-  //           queryParameters: params, options: Options(headers: {"Content-Type": "application/json", "Authorization": "Token $currentToken"}))
-  //       .then((response) {
-  //     if (response.statusCode == 200) {
-  //       return response.data;
-  //     } else {
-  //       throw Exception(response.statusMessage);
-  //     }
-  //   }).catchError(handleError);
-  // }
 
   static _getUserToken() async {
     return "";

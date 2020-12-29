@@ -53,7 +53,7 @@ class _AgentsListState extends State<AgentsList> {
                 child: SingleChildScrollView(
                   child: CodeEditor(
                     model: EditorModel(
-                      files: [FileEditor(name: "codigo", language: "java", code: agent.code)],
+                      files: [FileEditor(name: "codigo", language: "java", code: agent.transformerScript)],
                       styleOptions: new EditorModelStyleOptions(
                         fontSize: 13,
                       ),

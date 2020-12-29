@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:nats_message_processor_client/bus/actions.dart';
-import 'package:nats_message_processor_client/dto/add_agente_req.dart';
+import 'package:nats_message_processor_client/dto/add_update_agente_req.dart';
 import 'package:nats_message_processor_client/dto/agent.dart';
-import 'package:nats_message_processor_client/dto/update_agente_req.dart';
 import 'package:nats_message_processor_client/service/base_service.dart';
 import 'package:nats_message_processor_client/store/agent_store.dart';
 import 'package:nats_message_processor_client/utils/http_utils.dart';
@@ -14,12 +13,12 @@ class ProcessorService extends BaseService<AgentStore> {
   Future<Agent> addOrUpdate(Agent agent) {
     bus().send(ShowHud(text: "Enviando..."));
     if (agent.uuid == null) {
-      return Api.doPost(uri: "/agent", bodyParams: AddAgentReq.fromAgent(agent).toJson())
+      return Api.doPost(uri: "/agent", bodyParams: AddUpdateAgentReq.fromAgent(agent).toJson())
           .then((value) => Agent.fromJson(value))
           .then((value) => bus().send(SetAgent(value)).agent)
           .whenComplete(() => bus().send(HideHud()));
     } else {
-      return Api.doPost(uri: "/agent/${agent.uuid}", bodyParams: UpdateAgentReq.fromAgent(agent).toJson())
+      return Api.doPost(uri: "/agent/${agent.uuid}", bodyParams: AddUpdateAgentReq.fromAgent(agent).toJson())
           .then((value) => Agent.fromJson(value))
           .then((value) => bus().send(SetAgent(value)).agent)
           .whenComplete(() => bus().send(HideHud()));

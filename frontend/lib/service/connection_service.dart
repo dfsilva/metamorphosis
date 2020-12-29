@@ -7,7 +7,9 @@ import 'package:nats_message_processor_client/service/base_service.dart';
 import 'package:nats_message_processor_client/store/connection_store.dart';
 import 'package:nats_message_processor_client/utils/http_utils.dart';
 import 'package:nats_message_processor_client/utils/uuid_generator.dart';
-import 'package:nats_message_processor_client/ws/html_web_socket_connection.dart';
+import 'package:nats_message_processor_client/ws/web_socket_connection_base.dart'
+    if (dart.library.io) 'package:nats_message_processor_client/ws/io_web_socket_connection.dart'
+    if (dart.library.html) 'package:nats_message_processor_client/ws/html_web_socket_connection.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class ConnectionService extends BaseService<ConnectionStore> {
@@ -19,7 +21,7 @@ class ConnectionService extends BaseService<ConnectionStore> {
     if (!store().connected) {
       try {
         _channel?.sink?.close();
-        _channel = FactoryWebSocketConnection().connect('ws://${Api.HOST}/ws');
+        _channel = getConnectionFactory().connect('ws://${Api.HOST}/ws');
         _channel.stream.listen((data) {
           print(data);
           dynamic result = json.decode(data);
