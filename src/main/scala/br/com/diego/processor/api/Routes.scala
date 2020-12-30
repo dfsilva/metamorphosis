@@ -14,10 +14,11 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
 import akka.util.Timeout
 import br.com.diego.processor.actors.WsUserActor._
-import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, WsUserActor, WsUserFactoryActor}
+import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, ReceiveMessageActor, WsUserActor, WsUserFactoryActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -30,7 +31,7 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
   import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
   import io.circe.generic.auto._
 
-  lazy val log = system.log
+  private lazy val log = LoggerFactory.getLogger(getClass)
 
   implicit val timeout: Timeout = Timeout.create(system.settings.config.getDuration("server.askTimeout"))
   implicit val scheduler = system.scheduler
@@ -67,30 +68,7 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                       }
                     }
                   },
-                  post {
-                    entity(as[AddUpdateAgent]) { data =>
-                      val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
 
-                      val reply: Future[StatusReply[ActorResponse[AgentState]]] = processorManager.ask(AgentManagerActor.AddUpdateAgent(
-                        AgentState(
-                          uuid = None,
-                          title = data.title,
-                          description = data.description,
-                          transformerScript = data.transformerScript,
-                          conditionScript = data.conditionScript,
-                          from = data.from,
-                          to = data.to,
-                          to2 = data.to2,
-                          agentType = data.agentType,
-                          ordered = data.ordered
-                        ), _))
-
-                      onSuccess(reply) {
-                        case StatusReply.Success(response: ActorResponse[AgentState]) => complete(StatusCodes.OK -> response.body)
-                        case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
-                      }
-                    }
-                  },
                   pathPrefix(Segment) { uuid =>
                     post {
                       entity(as[AddUpdateAgent]) { data =>
@@ -116,7 +94,32 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                         }
                       }
                     }
-                  }
+                  },
+                  post {
+                    entity(as[AddUpdateAgent]) { data =>
+                      val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
+
+                      val reply: Future[StatusReply[ActorResponse[AgentState]]] = processorManager.ask(AgentManagerActor.AddUpdateAgent(
+                        AgentState(
+                          uuid = None,
+                          title = data.title,
+                          description = data.description,
+                          transformerScript = data.transformerScript,
+                          conditionScript = data.conditionScript,
+                          from = data.from,
+                          to = data.to,
+                          to2 = data.to2,
+                          agentType = data.agentType,
+                          ordered = data.ordered
+                        ), _))
+
+                      onSuccess(reply) {
+                        case StatusReply.Success(response: ActorResponse[AgentState]) => complete(StatusCodes.OK -> response.body)
+                        case StatusReply.Error(reason) => complete(StatusCodes.BadRequest -> reason)
+                      }
+                    }
+                  },
+
                 )
               },
 
@@ -162,14 +165,14 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
     val source: Source[Message, NotUsed] =
       ActorSource.actorRef[WsUserActor.Command](completionMatcher = {
         case Disconnected => {
-          log.debug("Disconected")
+          log.info("Disconected")
         }
       }, failureMatcher = {
         case Fail(ex) => ex
       }, bufferSize = 8, overflowStrategy = OverflowStrategy.fail)
         .map {
           case c: OutcommingMessage => {
-            log.debug("Enviando mensagem {} para {}", c.message)
+            log.info("Enviando mensagem {} para usuario", c.message.asJson.noSpaces)
             TextMessage.Strict(c.message.asJson.noSpaces)
           }
           case _ => {
