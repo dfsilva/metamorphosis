@@ -8,12 +8,12 @@ import 'package:nats_message_processor_client/screen/agents_list.dart';
 import 'package:nats_message_processor_client/service/agent_service.dart';
 import 'package:nats_message_processor_client/service/service_locator.dart';
 
-class ListProcessorsScreen extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
   @override
-  _ListProcessorsScreenState createState() => _ListProcessorsScreenState();
+  _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _ListProcessorsScreenState extends State<ListProcessorsScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   ProcessorService _processorService = Services.get<ProcessorService>(ProcessorService);
 
   final _pageController = PageController(keepPage: true, initialPage: 0);
@@ -41,7 +41,6 @@ class _ListProcessorsScreenState extends State<ListProcessorsScreen> {
         body: Observer(
           builder: (_) {
             List<Agent> agents = _processorService.store().agents.values.toList();
-
             return PageView(
               controller: _pageController,
               children: [AgentsList(agents: agents), GraphAgents(agents: agents)],

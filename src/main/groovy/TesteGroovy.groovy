@@ -11,6 +11,7 @@ import groovy.json.JsonSlurper
 
 def object = new JsonSlurper().parseText(message)
 object.propriedadeExtra = "Propriedade Extra Adicionada"
+Thread.sleep(5000)
 return JsonOutput.toJson(object)
 
 

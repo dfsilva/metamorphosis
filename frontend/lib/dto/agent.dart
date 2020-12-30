@@ -28,7 +28,7 @@ class Agent {
       this.to2,
       this.status,
       this.agentType = "D",
-      this.ordered,
+      this.ordered = false,
       this.waiting = const <TopicMessage>[],
       this.processing = const <String, TopicMessage>{},
       this.error = const <TopicMessage>[],
