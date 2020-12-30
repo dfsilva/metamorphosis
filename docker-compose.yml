@@ -14,33 +14,33 @@ services:
       - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
   #    restart: always
 
-  #  cassandra1:
-  #    image: cassandra:latest
-  #    volumes:
-  #      - "cassandra_data_1:/var/lib/cassandra"
-  #    environment:
-  #      - "CASSANDRA_SEEDS=cassandra-seed"
-  #      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-  #      #      needed for setting up custom cluster name
-  #      - "CASSANDRA_DC=se1"
-  #      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-  #    depends_on:
-  #      - cassandra-seed
-  #  #    restart: always
-  #
-  #  cassandra2:
-  #    image: cassandra:latest
-  #    volumes:
-  #      - "cassandra_data_2:/var/lib/cassandra"
-  #    environment:
-  #      - "CASSANDRA_SEEDS=cassandra-seed"
-  #      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-  #      #      needed for setting up custom cluster name
-  #      - "CASSANDRA_DC=se1"
-  #      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-  #    depends_on:
-  #      - cassandra-seed
-  #  #    restart: always
+  cassandra1:
+    image: cassandra:latest
+    volumes:
+      - "cassandra_data_1:/var/lib/cassandra"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra-seed"
+      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
+      #      needed for setting up custom cluster name
+      - "CASSANDRA_DC=se1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    depends_on:
+      - cassandra-seed
+  #    restart: always
+
+  cassandra2:
+    image: cassandra:latest
+    volumes:
+      - "cassandra_data_2:/var/lib/cassandra"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra-seed"
+      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
+      #      needed for setting up custom cluster name
+      - "CASSANDRA_DC=se1"
+      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
+    depends_on:
+      - cassandra-seed
+  #    restart: always
 
   nats:
     image: nats-streaming
@@ -53,7 +53,7 @@ services:
 #    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
 #    networks: [ "br.com.diego.processor.nats" ]
 #    depends_on: [ "br.com.diego.processor.nats" ]
-#  br.com.diego.processor.nats-2:
+#  nats-2:
 #    image: br.com.diego.processor.nats
 #    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
 #    networks: [ "br.com.diego.processor.nats" ]

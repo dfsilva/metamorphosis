@@ -31,7 +31,7 @@ object AgentManagerActor {
   final case class AddUpdateAgent(agentState: AgentState,
                                   replyTo: ActorRef[StatusReply[ActorResponse[AgentState]]]) extends Command
 
-  final case class ProcessMessageResponse(response: AgentActor.Command) extends Command
+  final case class AgenteMessageResponse(response: AgentActor.Command) extends Command
 
   final object SendAgentsDetails extends Command
 
@@ -51,11 +51,12 @@ object AgentManagerActor {
 
   def apply(): Behavior[Command] = {
     Behaviors.setup[Command] { context =>
-      val processMessageActor: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
+      val agenteResponseAdapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgenteMessageResponse(rsp))
+
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("ProcessorManager", _ID),
         State(),
-        (state, command) => processCommand(state, command, context, processMessageActor),
+        (state, command) => processCommand(state, command, context, agenteResponseAdapter),
         (state, event) => handlerEvent(state, event))
         .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 5, keepNSnapshots = 3))
         .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
@@ -94,7 +95,7 @@ object AgentManagerActor {
         Effect.none
       }
 
-      case messageResponse: ProcessMessageResponse =>
+      case messageResponse: AgenteMessageResponse =>
         messageResponse.response match {
           case ResponseCreated(uuid, scriptAgent, replyTo) => {
             Effect.persist(AgentAdded(scriptAgent))
