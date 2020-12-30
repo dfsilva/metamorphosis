@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:nats_message_processor_client/utils/message.dart';
 
 class Api {
-  static const String HOST = "127.0.0.1:8081";
-  // static const String HOST = "192.168.31.9:8081";
+  // static const String HOST = "127.0.0.1:8081";
+  static const String HOST = "192.168.31.9:8081";
   static const String _URL = "http://$HOST/api";
 
   static handleError(error) {

@@ -4,7 +4,7 @@ import 'package:nats_message_processor_client/bus/actions.dart';
 import 'package:nats_message_processor_client/bus/rx_bus.dart';
 import 'package:nats_message_processor_client/parent.dart';
 import 'package:nats_message_processor_client/routes.dart';
-import 'package:nats_message_processor_client/screen/list_agents.dart';
+import 'package:nats_message_processor_client/screen/home.dart';
 import 'package:nats_message_processor_client/service/connection_service.dart';
 import 'package:nats_message_processor_client/service/hud_service.dart';
 import 'package:nats_message_processor_client/service/agent_service.dart';
@@ -43,7 +43,7 @@ class _MyAppState extends State<MyApp> {
           brightness: Brightness.dark,
         ),
         themeMode: ThemeMode.dark,
-        routes: {Routes.HOME: (context) => ListProcessorsScreen()},
+        routes: {Routes.HOME: (context) => HomeScreen()},
         builder: (ctx, widget) => BotToastInit()(ctx, ParentWidget(widget)),
         initialRoute: Routes.HOME,
       );

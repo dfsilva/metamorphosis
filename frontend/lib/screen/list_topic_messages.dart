@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:nats_message_processor_client/dto/topic_message.dart';
 
 class ListTopicMessages extends StatefulWidget {
@@ -32,6 +33,7 @@ class _ListTopicMessagesState extends State<ListTopicMessages> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                     Text("ID: ${topicMessage.id}"),
+                    Text("Created: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(topicMessage.created)}"),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +47,9 @@ class _ListTopicMessagesState extends State<ListTopicMessages> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("OUT: "),
-                        Flexible(child: Text(topicMessage.result, textAlign: TextAlign.left)),
+                        (topicMessage.result != null && topicMessage.result.isNotEmpty)
+                            ? Flexible(child: Text(topicMessage.result, textAlign: TextAlign.left))
+                            : SizedBox.shrink(),
                       ],
                     )
                   ]),
