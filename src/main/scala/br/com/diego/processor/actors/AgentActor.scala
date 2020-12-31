@@ -12,7 +12,6 @@ import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher, NatsSubscriber}
-import br.com.diego.processor.proccess.RuntimeProcessor
 import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -21,7 +20,6 @@ import org.slf4j.LoggerFactory
 
 import java.util.Date
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
 
 
 object AgentActor {
@@ -60,6 +58,8 @@ object AgentActor {
 
   final case class SendDetails() extends Command
 
+  final case class ProcessMessageResponse(response: ProcessMessageActor.Command) extends Command
+
   sealed trait Event extends CborSerializable
 
   final case class Created(agent: AgentState) extends Event
@@ -82,15 +82,18 @@ object AgentActor {
     })
   }
 
-  def apply(processorId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
+  def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
+
+
     Behaviors.setup[Command] { context =>
+      val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]] =
         context.spawn(Topic[WsUserActor.OutcommingMessage](WsUserActor.TopicName), WsUserActor.TopicName)
 
       EventSourcedBehavior[Command, Event, State](
-        PersistenceId("Processor", processorId),
+        PersistenceId("Processor", agentId),
         State.empty,
-        (state, command) => handlerCommands(processorId, state, command, streamingConnection, context, wsUserTopic),
+        (state, command) => handlerCommands(agentId, state, command, streamingConnection, context, wsUserTopic, processActor),
         (state, event) => handlerEvent(state, event))
         .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 5, keepNSnapshots = 3))
         .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
@@ -100,7 +103,8 @@ object AgentActor {
   private def handlerCommands(uuid: String, state: State, command: Command,
                               streamingConnection: StreamingConnection,
                               context: ActorContext[Command],
-                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]]): Effect[Event, State] = {
+                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]],
+                              processActor: ActorRef[ProcessMessageActor.Command]): Effect[Event, State] = {
     command match {
       case Create(agent, replyTo, replyTo2) =>
         Effect.persist(Created(agent))
@@ -114,8 +118,7 @@ object AgentActor {
         log.info(s"Inicializando Subscriber $uuid")
         NatsSubscriber(streamingConnection, state.agent.from, uuid, state.agent.ordered,
           context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid"))
-        context.self ! ProcessMessages()
-        Effect.none
+        Effect.reply(context.self)(ProcessMessages())
       }
 
       case AddToProcess(message, natsMessage, replyTo) => {
@@ -129,27 +132,31 @@ object AgentActor {
       }
 
       case ProcessMessages() => {
-        val messagesToProcess = state.agent.error ++ state.agent.processing.values ++ state.agent.waiting
-        messagesToProcess match {
-          case next +: xl => {
-            Effect.persist(InProcessing(next)).thenReply(context.self)(updated => {
-              sendStateToUser(wsUserTopic, updated.agent.asJson)
-              context.self ! ProcessMessages()
-              ProcessMessage(next)
-            })
-          }
-          case _ => {
-              Effect.none
-          }
+        state.agent.queue.headOption match {
+          case Some(message) =>
+            context.self ! ProcessMessage(message)
+          case _ =>
         }
+        Effect.none
       }
-
       case ProcessMessage(message) => {
         log.info(s"Processando mensagem $message com codigo ${state.agent.transformerScript}")
-        RuntimeProcessor(state.agent.transformerScript, message.content).process match {
-          case Success(result) => {
-            log.info(s"Processado com sucesso $result")
-            Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result))))
+        Effect.persist(InProcessing(message)).thenReply(context.self)(updated => {
+          sendStateToUser(wsUserTopic, updated.agent.asJson)
+          context.spawn(ProcessMessageActor(), "ProcessMessageActor") ! ProcessMessageActor.ProcessMessage(message, state.agent.transformerScript, processActor)
+          ProcessMessages()
+        })
+      }
+      case SendDetails() => {
+        log.info(s"Enviando notificacao para usuairo")
+        wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.agent.asJson, action = "set-agent-detail")))
+        Effect.none
+      }
+
+      case processActor: ProcessMessageResponse =>
+        processActor.response match {
+          case ProcessMessageActor.ProcessedSuccess(message, result) => {
+            Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result), processed = Some(new Date().getTime))))
               .thenReply(context.self)(updated => {
                 state.agent.to match {
                   case Some(value) => NatsPublisher(streamingConnection, value, result)
@@ -158,8 +165,7 @@ object AgentActor {
                 ProcessMessages()
               })
           }
-          case Failure(error) => {
-            log.error(s"Processado com falha ${error.getMessage}")
+          case ProcessMessageActor.ProcessedFailure(message, error) => {
             Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
               .thenReply(context.self)(updated => {
                 sendStateToUser(wsUserTopic, updated.agent.asJson)
@@ -167,16 +173,10 @@ object AgentActor {
               })
           }
         }
-      }
-      case SendDetails() => {
-        log.info(s"Enviando notificacao para usuairo")
-        wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.agent.asJson, action = "set-agent-detail")))
-        Effect.none
-      }
     }
   }
 
-  def sendStateToUser(wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]], json:Json): Unit ={
+  def sendStateToUser(wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]], json: Json): Unit = {
     wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = json, action = "set-agent-detail")))
   }
 
@@ -196,17 +196,15 @@ object AgentActor {
       ))
 
       case AddedToProcess(topicMessage) => state.copy(agent = state.agent.copy(
-        waiting = state.agent.waiting.filter(_.id != topicMessage.id) :+ topicMessage,
-        error = state.agent.error.filter(_.id != topicMessage.id)))
+        error = state.agent.error.filter(_ != topicMessage.id)))
 
       case InProcessing(topicMessage) => state.copy(agent = state.agent.copy(
-        waiting = state.agent.waiting.filter(_.id != topicMessage.id),
-        processing = state.agent.processing + (topicMessage.id -> topicMessage),
-        error = state.agent.error.filter(_.id != topicMessage.id)))
+        processing = state.agent.processing :+ topicMessage.id,
+        error = state.agent.error.filter(_ != topicMessage.id)))
 
       case ProcessedSuccessfull(message) => state.copy(agent = state.agent.copy(
-        success = state.agent.success + (message.id -> message.copy(processed = Some(new Date().getTime))),
-        processing = state.agent.processing - message.id))
+        success = state.agent.success :+ message.id,
+        processing = state.agent.processing.filter(_ != message.id)))
       case ProcessedFailure(message, error) => state.copy(agent = state.agent.copy(error = (state.agent.error :+ message),
         processing = state.agent.processing - message.id))
     }

@@ -25,10 +25,10 @@ package object domains {
       to2 = None,
       status = "A",
       agentType = Types.Default,
-      waiting = Queue(),
-      processing = Map(),
-      error = Queue(),
-      success = Map()
+      queue = Queue(),
+      processing = Seq(),
+      error = Seq(),
+      success = Seq()
     )
   }
 
@@ -43,10 +43,10 @@ package object domains {
                               status: String = Status.Active,
                               agentType: String = Types.Default,
                               ordered: Boolean = true,
-                              waiting: Queue[TopicMessage] = Queue(),
-                              processing: Map[String, TopicMessage] = Map(),
-                              error: Queue[TopicMessage] = Queue(),
-                              success: Map[String, TopicMessage] = Map()
+                              queue: Queue[TopicMessage] = Queue(),
+                              processing: Seq[String] = Seq(),
+                              error: Seq[String] = Seq(),
+                              success: Seq[String] = Seq()
                              ) extends CborSerializable
 
 

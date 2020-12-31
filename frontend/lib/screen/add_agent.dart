@@ -46,7 +46,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         initialValue: _agent.title,
                         validator: (from) {
                           if (from.isEmpty) {
-                            return "Provide a title";
+                            return "Please provide a title";
                           }
                           return null;
                         },
@@ -69,22 +69,39 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         decoration: InputDecoration(hintText: "description", labelText: "description"),
                       ),
                     ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: Row(
+                        children: [
+                          Switch(
+                            value: this._agent.ordered,
+                            onChanged: (value) {
+                              setState(() {
+                                this._agent = this._agent.copyWith(ordered: value);
+                              });
+                            },
+                          ),
+                          Text("ordered")
+                        ],
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: DropdownButtonFormField(
-                        value: this._agent.agentType,
-                        items: <DropdownMenuItem>[
-                          DropdownMenuItem(value: "D", child: Text("Default")),
-                          DropdownMenuItem(value: "C", child: Text("Conditional"))
-                        ],
-                        onChanged: (value){
-                          setState(() {
-                            this._agent = this._agent.copyWith(agentType: value);
-                          });
-                        },
-                        onSaved: (type) {
-                          this._agent = this._agent.copyWith(agentType: type);
-                        }
+                          value: this._agent.agentType,
+                          items: <DropdownMenuItem>[
+                            DropdownMenuItem(value: "D", child: Text("Default")),
+                            DropdownMenuItem(value: "C", child: Text("Conditional"))
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              this._agent = this._agent.copyWith(agentType: value);
+                            });
+                          },
+                          onSaved: (type) {
+                            this._agent = this._agent.copyWith(agentType: type);
+                          }
                       ),
                     ),
                     Padding(
@@ -118,33 +135,33 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                     ),
                     (_agent.agentType == "C")
                         ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                            child: CodeEditor(
-                                model: EditorModel(
-                                  files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.conditionScript)],
-                                  styleOptions: new EditorModelStyleOptions(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                disableNavigationbar: false,
-                                onSubmit: (String language, String value) {
-                                  this._agent = this._agent.copyWith(conditionScript: value);
-                                }),
-                          )
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: CodeEditor(
+                          model: EditorModel(
+                            files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.conditionScript)],
+                            styleOptions: new EditorModelStyleOptions(
+                              fontSize: 13,
+                            ),
+                          ),
+                          disableNavigationbar: false,
+                          onSubmit: (String language, String value) {
+                            this._agent = this._agent.copyWith(conditionScript: value);
+                          }),
+                    )
                         : SizedBox.shrink(),
                     (_agent.agentType == "C")
                         ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                            child: TextFormField(
-                              keyboardType: TextInputType.text,
-                              autofocus: true,
-                              initialValue: _agent.to2,
-                              onSaved: (to2) {
-                                this._agent = this._agent.copyWith(to2: to2);
-                              },
-                              decoration: InputDecoration(hintText: "to topic 1", labelText: "to topic 1"),
-                            ),
-                          )
+                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                      child: TextFormField(
+                        keyboardType: TextInputType.text,
+                        autofocus: true,
+                        initialValue: _agent.to2,
+                        onSaved: (to2) {
+                          this._agent = this._agent.copyWith(to2: to2);
+                        },
+                        decoration: InputDecoration(hintText: "to topic 1", labelText: "to topic 1"),
+                      ),
+                    )
                         : SizedBox.shrink(),
                     Padding(
                         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),

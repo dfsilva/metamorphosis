@@ -1,10 +1,10 @@
 package br.com.diego.processor.api
 
+import io.circe.Decoder.Result
+import io.circe.{Decoder, Encoder, HCursor, Json}
+
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import io.circe.Decoder.Result
-import io.circe.generic.semiauto.deriveDecoder
-import io.circe.{Decoder, Encoder, HCursor, Json}
 
 trait CirceJsonProtocol {
 

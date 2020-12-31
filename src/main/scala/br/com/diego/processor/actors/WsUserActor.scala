@@ -9,7 +9,6 @@ import br.com.diego.processor.api.{IncomeWsMessage, OutcomeWsMessage}
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
-import org.slf4j.{Logger, LoggerFactory}
 
 object WsUserActor {
 

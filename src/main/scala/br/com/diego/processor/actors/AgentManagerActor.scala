@@ -31,7 +31,7 @@ object AgentManagerActor {
   final case class AddUpdateAgent(agentState: AgentState,
                                   replyTo: ActorRef[StatusReply[ActorResponse[AgentState]]]) extends Command
 
-  final case class AgenteMessageResponse(response: AgentActor.Command) extends Command
+  final case class AgentMessageResponse(response: AgentActor.Command) extends Command
 
   final object SendAgentsDetails extends Command
 
@@ -51,7 +51,7 @@ object AgentManagerActor {
 
   def apply(): Behavior[Command] = {
     Behaviors.setup[Command] { context =>
-      val agenteResponseAdapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgenteMessageResponse(rsp))
+      val agenteResponseAdapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgentMessageResponse(rsp))
 
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("ProcessorManager", _ID),
@@ -95,7 +95,7 @@ object AgentManagerActor {
         Effect.none
       }
 
-      case messageResponse: AgenteMessageResponse =>
+      case messageResponse: AgentMessageResponse =>
         messageResponse.response match {
           case ResponseCreated(uuid, scriptAgent, replyTo) => {
             Effect.persist(AgentAdded(scriptAgent))

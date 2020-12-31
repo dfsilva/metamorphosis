@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
 import akka.util.Timeout
 import br.com.diego.processor.actors.WsUserActor._
-import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, ReceiveMessageActor, WsUserActor, WsUserFactoryActor}
+import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, WsUserActor, WsUserFactoryActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
