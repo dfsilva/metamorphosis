@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, WsUserFactoryActor}
+import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserFactoryActor}
 import br.com.diego.processor.api.{Routes, Server}
 import com.typesafe.config.ConfigFactory
 
@@ -19,8 +19,8 @@ object Guardian {
       val httpPort = context.system.settings.config.getInt("server.http.port")
 
       AgentActor.init(context.system)
-      AgentManagerActor.init(context.system)
-      ClusterSharding(context.system).entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID) ! AgentManagerActor.StartSubscribers()
+      ManagerAgentsActor.init(context.system)
+      ClusterSharding(context.system).entityRefFor(ManagerAgentsActor.EntityKey, ManagerAgentsActor._ID) ! ManagerAgentsActor.StartSubscribers()
 
       val wsConCreatorRef = context.spawn(WsUserFactoryActor(), "wsConCreator")
 

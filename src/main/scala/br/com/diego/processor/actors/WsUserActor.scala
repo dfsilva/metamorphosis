@@ -36,7 +36,7 @@ object WsUserActor {
         decode[IncomeWsMessage](message) match {
           case Right(msg: IncomeWsMessage) => {
             msg.action match {
-              case "get-processes" => ClusterSharding(context.system).entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID) ! AgentManagerActor.SendAgentsDetails
+              case "get-processes" => ClusterSharding(context.system).entityRefFor(ManagerAgentsActor.EntityKey, ManagerAgentsActor._ID) ! ManagerAgentsActor.SendAgentsDetails
               case "listem-topic" =>
             }
           }

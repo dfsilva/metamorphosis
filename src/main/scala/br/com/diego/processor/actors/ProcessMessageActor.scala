@@ -15,9 +15,12 @@ object ProcessMessageActor {
 
   sealed trait Command extends CborSerializable
 
-  final case class ProcessMessage(msg: TopicMessage, script: String, replyTo: ActorRef[Command]) extends Command
+  final case class ProcessMessage(msg: TopicMessage,
+                                  script: String,
+                                  ifscript: Option[String],
+                                  replyTo: ActorRef[Command]) extends Command
 
-  final case class ProcessedSuccess(msg: TopicMessage, result: String) extends Command
+  final case class ProcessedSuccess(msg: TopicMessage, result: String, ifResult: Option[String]) extends Command
 
   final case class ProcessedFailure(msg: TopicMessage, error: Throwable) extends Command
 
@@ -25,22 +28,44 @@ object ProcessMessageActor {
   def apply(): Behavior[ProcessMessageActor.Command] = Behaviors.setup { context =>
 
     Behaviors.receiveMessage[ProcessMessageActor.Command] {
-      case ProcessMessage(message, script, replyTo) => {
-        log.info("ProcessMessage")
-        RuntimeProcessor(script, message.content).process match {
-          case Success(result) => {
-            log.info(s"Processado com sucesso $result")
-            replyTo ! ProcessedSuccess(msg = message, result = result)
-            Behaviors.stopped
+      case ProcessMessage(message, script, ifscript, replyTo) => {
+        log.info(s"Processing message ${message.id}")
+        ifscript match {
+          case Some(value) => {
+            RuntimeProcessor(value, message.content).process match {
+              case Success(result) => {
+                log.info(s"IF script processado com sucesso $result")
+                _processMessage(message, script, Some(result), replyTo)
+              }
+              case Failure(error) => {
+                log.error(s"IF script processado com falha ${error.getMessage}")
+                replyTo ! ProcessedFailure(message, error)
+                Behaviors.stopped
+              }
+            }
           }
-          case Failure(error) => {
-            log.error(s"Processado com falha ${error.getMessage}")
-            replyTo ! ProcessedFailure(msg = message, error)
-            Behaviors.stopped
+          case _ => {
+            _processMessage(message, script, None, replyTo)
           }
         }
       }
     }
   }
+
+  private def _processMessage(message: TopicMessage, script: String, ifResult: Option[String], replyTo: ActorRef[Command]): Behavior[Command] = {
+    RuntimeProcessor(script, message.content).process match {
+      case Success(result) => {
+        log.info(s"Processado com sucesso $result")
+        replyTo ! ProcessedSuccess(msg = message, result = result, ifResult = ifResult)
+        Behaviors.stopped
+      }
+      case Failure(error) => {
+        log.error(s"Processado com falha ${error.getMessage}")
+        replyTo ! ProcessedFailure(msg = message, error)
+        Behaviors.stopped
+      }
+    }
+  }
+
 
 }

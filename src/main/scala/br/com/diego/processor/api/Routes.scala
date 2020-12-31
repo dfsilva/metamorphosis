@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
 import akka.util.Timeout
 import br.com.diego.processor.actors.WsUserActor._
-import br.com.diego.processor.actors.{AgentActor, AgentManagerActor, WsUserActor, WsUserFactoryActor}
+import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor, WsUserFactoryActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
@@ -72,9 +72,9 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                   pathPrefix(Segment) { uuid =>
                     post {
                       entity(as[AddUpdateAgent]) { data =>
-                        val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
+                        val processorManager = sharding.entityRefFor(ManagerAgentsActor.EntityKey, ManagerAgentsActor._ID)
                         val reply: Future[StatusReply[ActorResponse[AgentState]]] =
-                          processorManager.ask(AgentManagerActor.AddUpdateAgent(
+                          processorManager.ask(ManagerAgentsActor.AddUpdateAgent(
                             AgentState(
                               uuid = Some(uuid),
                               title = data.title,
@@ -97,9 +97,9 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
                   },
                   post {
                     entity(as[AddUpdateAgent]) { data =>
-                      val processorManager = sharding.entityRefFor(AgentManagerActor.EntityKey, AgentManagerActor._ID)
+                      val processorManager = sharding.entityRefFor(ManagerAgentsActor.EntityKey, ManagerAgentsActor._ID)
 
-                      val reply: Future[StatusReply[ActorResponse[AgentState]]] = processorManager.ask(AgentManagerActor.AddUpdateAgent(
+                      val reply: Future[StatusReply[ActorResponse[AgentState]]] = processorManager.ask(ManagerAgentsActor.AddUpdateAgent(
                         AgentState(
                           uuid = None,
                           title = data.title,

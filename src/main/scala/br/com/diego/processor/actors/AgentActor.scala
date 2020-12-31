@@ -10,7 +10,7 @@ import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.api.OutcomeWsMessage
-import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
+import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage, Types}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher, NatsSubscriber}
 import io.circe.Json
 import io.circe.generic.auto._
@@ -116,8 +116,8 @@ object AgentActor {
 
       case StartSubscriber() => {
         log.info(s"Inicializando Subscriber $uuid")
-        NatsSubscriber(streamingConnection, state.agent.from, uuid, state.agent.ordered,
-          context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid"))
+        val receiveMessageActor = context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid")
+        NatsSubscriber(streamingConnection, state.agent.from, uuid, state.agent.ordered, receiveMessageActor)
         Effect.reply(context.self)(ProcessMessages())
       }
 
@@ -132,13 +132,14 @@ object AgentActor {
       }
 
       case ProcessMessages() => {
-        state.agent.queue.headOption match {
-          case Some(message) =>
-            context.self ! ProcessMessage(message)
-          case _ =>
-        }
-        Effect.none
+        Effect.reply(context.self)(
+          state.agent.queue.headOption match {
+            case Some(message) => ProcessMessage(message)
+            case _ =>
+          }
+        )
       }
+
       case ProcessMessage(message) => {
         log.info(s"Processando mensagem $message com codigo ${state.agent.transformerScript}")
         Effect.persist(InProcessing(message)).thenReply(context.self)(updated => {
@@ -147,6 +148,7 @@ object AgentActor {
           ProcessMessages()
         })
       }
+
       case SendDetails() => {
         log.info(s"Enviando notificacao para usuairo")
         wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.agent.asJson, action = "set-agent-detail")))
@@ -155,12 +157,24 @@ object AgentActor {
 
       case processActor: ProcessMessageResponse =>
         processActor.response match {
-          case ProcessMessageActor.ProcessedSuccess(message, result) => {
+          case ProcessMessageActor.ProcessedSuccess(message, result, ifResult) => {
             Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result), processed = Some(new Date().getTime))))
               .thenReply(context.self)(updated => {
-                state.agent.to match {
-                  case Some(value) => NatsPublisher(streamingConnection, value, result)
+
+                state.agent.agentType match {
+                  case Types.Conditional => {
+                    ifResult
+
+
+                  }
+                  case _ => {
+                    state.agent.to match {
+                      case Some(value) => NatsPublisher(streamingConnection, value, result)
+                    }
+                  }
                 }
+
+
                 sendStateToUser(wsUserTopic, updated.agent.asJson)
                 ProcessMessages()
               })
