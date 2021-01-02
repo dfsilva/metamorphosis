@@ -24,9 +24,11 @@ object ManagerAgentsActor {
   final case class State(agents: Seq[String] = Seq()) extends CborSerializable
 
   sealed trait Command extends CborSerializable
+
   final case class AgentResponse(response: AgentActor.Command) extends Command
 
   final case class StartSubscribers() extends Command
+
   final case class AddUpdateAgent(agentState: AgentState,
                                   replyTo: ActorRef[StatusReply[ActorResponse[AgentState]]]) extends Command
 
@@ -34,7 +36,9 @@ object ManagerAgentsActor {
 
 
   sealed trait Event extends CborSerializable
+
   final case class AgentAdded(agent: AgentState) extends Event
+
   final case class AgentUpdated(agent: AgentState) extends Event
 
 
@@ -47,7 +51,6 @@ object ManagerAgentsActor {
   def apply(): Behavior[Command] = {
     Behaviors.setup[Command] { context =>
       val agentResponseAdapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgentResponse(rsp))
-
       EventSourcedBehavior[Command, Event, State](
         PersistenceId(_ID, _ID),
         State(),
@@ -95,13 +98,15 @@ object ManagerAgentsActor {
             Effect.persist(AgentAdded(agent))
               .thenReply(replyTo)(updated => {
                 val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, uuid)
-                entityRef ! AgentActor.StartSubscriber()
+                entityRef ! AgentActor.ProcessMessages()
                 StatusReply.success(ActorResponse[AgentState](agent))
               })
           }
           case ResponseUpdated(uuid, agentUpdated, replyTo) => {
             Effect.persist(AgentUpdated(agentUpdated))
               .thenReply(replyTo)(updated => {
+                val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, uuid)
+                entityRef ! AgentActor.ProcessMessages()
                 StatusReply.success(ActorResponse[AgentState](agentUpdated))
               })
           }

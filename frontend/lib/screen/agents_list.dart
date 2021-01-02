@@ -52,7 +52,7 @@ class _AgentsListState extends State<AgentsList> {
                 ),
                 CodeEditor(
                   model: EditorModel(
-                    files: [FileEditor(name: "codigo", language: "java", code: agent.transformerScript)],
+                    files: [FileEditor(name: "codigo", language: "java", code: agent.dataScript)],
                     styleOptions: new EditorModelStyleOptions(
                       fontSize: 13,
                     ),
@@ -88,7 +88,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: agent.processing.values.toList()),
+                                    child: ListTopicMessages(topicMessages: agent.processing),
                                   ));
                         },
                       ),
@@ -114,7 +114,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: agent.success.values.toList()),
+                                    child: ListTopicMessages(topicMessages: []),
                                   ));
                         },
                       ),

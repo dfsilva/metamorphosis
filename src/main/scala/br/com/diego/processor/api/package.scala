@@ -8,8 +8,8 @@ package object api {
 
   case class AddUpdateAgent(title: String,
                             description: Option[String],
-                            transformerScript: String,
-                            conditionScript: Option[String],
+                            dataScript: String,
+                            ifscript: Option[String],
                             from: String,
                             to: Option[String],
                             to2: Option[String],

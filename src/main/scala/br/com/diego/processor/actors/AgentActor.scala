@@ -19,6 +19,7 @@ import io.nats.streaming.{Message, StreamingConnection}
 import org.slf4j.LoggerFactory
 
 import java.util.Date
+import scala.collection.immutable.Queue
 import scala.concurrent.duration._
 
 
@@ -54,6 +55,8 @@ object AgentActor {
 
   final case class ProcessMessages() extends Command
 
+  final case class WaitCommand() extends Command
+
   final case class ProcessMessage(message: TopicMessage) extends Command
 
   final case class SendDetails() extends Command
@@ -66,9 +69,11 @@ object AgentActor {
 
   final case class Updated(agent: AgentState) extends Event
 
+  final case class CleanProcessing() extends Event
+
   final case class AddedToProcess(msg: TopicMessage) extends Event
 
-  final case class InProcessing(msg: TopicMessage) extends Event
+  final case class Processing(msg: TopicMessage) extends Event
 
   final case class ProcessedFailure(msg: TopicMessage, error: Throwable) extends Event
 
@@ -78,17 +83,22 @@ object AgentActor {
 
   def init(system: ActorSystem[_]): Unit = {
     ClusterSharding(system).init(Entity(EntityKey) { entityContent =>
-      Behaviors.supervise(AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection())).onFailure[Exception](SupervisorStrategy.restart)
+      Behaviors
+        .supervise(AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection()))
+        .onFailure[Exception](SupervisorStrategy.restart)
     })
   }
 
   def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
 
-
     Behaviors.setup[Command] { context =>
+
       val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
+
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]] =
         context.spawn(Topic[WsUserActor.OutcommingMessage](WsUserActor.TopicName), WsUserActor.TopicName)
+
+      context.self ! StartSubscriber()
 
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("Processor", agentId),
@@ -106,6 +116,7 @@ object AgentActor {
                               wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]],
                               processActor: ActorRef[ProcessMessageActor.Command]): Effect[Event, State] = {
     command match {
+
       case Create(agent, replyTo, replyTo2) =>
         Effect.persist(Created(agent))
           .thenReply(replyTo)(updated => ResponseCreated(uuid, updated.agent, replyTo2))
@@ -115,14 +126,17 @@ object AgentActor {
           .thenReply(replyTo)(updated => ResponseUpdated(uuid, updated.agent, replyTo2))
 
       case StartSubscriber() => {
-        log.info(s"Inicializando Subscriber $uuid")
-        val receiveMessageActor = context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid")
-        NatsSubscriber(streamingConnection, state.agent.from, uuid, state.agent.ordered, receiveMessageActor)
-        Effect.reply(context.self)(ProcessMessages())
+        log.info(s"Iniciando subscriber $uuid")
+        Effect.persist(CleanProcessing()).thenReply(context.self)(updated => {
+          sendStateToUser(wsUserTopic, updated.agent.asJson)
+          val receiveMessageActor = context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid")
+          NatsSubscriber(streamingConnection, state.agent.from, uuid, receiveMessageActor)
+          ProcessMessages()
+        })
       }
 
       case AddToProcess(message, natsMessage, replyTo) => {
-        log.info(s"Adicionando mensagem para processamento $message com codigo ${state.agent.transformerScript}")
+        log.info(s"Adicionando mensagem para processamento $message com codigo ${state.agent.dataScript}")
         Effect.persist(AddedToProcess(message))
           .thenReply(replyTo)(updated => {
             sendStateToUser(wsUserTopic, updated.agent.asJson)
@@ -132,21 +146,31 @@ object AgentActor {
       }
 
       case ProcessMessages() => {
-        Effect.reply(context.self)(
-          state.agent.queue.headOption match {
-            case Some(message) => ProcessMessage(message)
-            case _ =>
+        if (!state.agent.ordered || state.agent.processing.isEmpty) {
+          (state.agent.error ++ state.agent.waiting).headOption match {
+            case Some(message) => Effect.reply(context.self)(ProcessMessage(message))
+            case _ => Effect.none
           }
-        )
+        } else {
+          Effect.none
+        }
       }
 
       case ProcessMessage(message) => {
-        log.info(s"Processando mensagem $message com codigo ${state.agent.transformerScript}")
-        Effect.persist(InProcessing(message)).thenReply(context.self)(updated => {
+        log.info(s"Processando mensagem $message")
+        Effect.persist(Processing(message)).thenReply(context.self)(updated => {
           sendStateToUser(wsUserTopic, updated.agent.asJson)
-          context.spawn(ProcessMessageActor(), "ProcessMessageActor") ! ProcessMessageActor.ProcessMessage(message, state.agent.transformerScript, processActor)
-          ProcessMessages()
+          context.spawn(ProcessMessageActor(), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessage(message, state.agent.dataScript, state.agent.ifscript, processActor)
+          if (!state.agent.ordered) {
+            log.info(s"Agente não ordenado $message")
+            ProcessMessages()
+          } else
+            WaitCommand()
         })
+      }
+
+      case WaitCommand() => {
+        Effect.none
       }
 
       case SendDetails() => {
@@ -158,14 +182,28 @@ object AgentActor {
       case processActor: ProcessMessageResponse =>
         processActor.response match {
           case ProcessMessageActor.ProcessedSuccess(message, result, ifResult) => {
-            Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result), processed = Some(new Date().getTime))))
+            Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result), ifResult = ifResult, processed = Some(new Date().getTime))))
               .thenReply(context.self)(updated => {
-
                 state.agent.agentType match {
                   case Types.Conditional => {
-                    ifResult
-
-
+                    ifResult match {
+                      case Some(ifValue) => {
+                        if (ifValue.equalsIgnoreCase("true") || ifValue.equalsIgnoreCase("1")) {
+                          state.agent.to match {
+                            case Some(value) => NatsPublisher(streamingConnection, value, result)
+                          }
+                        } else {
+                          state.agent.to2 match {
+                            case Some(value) => NatsPublisher(streamingConnection, value, result)
+                          }
+                        }
+                      }
+                      case _ => {
+                        state.agent.to match {
+                          case Some(value) => NatsPublisher(streamingConnection, value, result)
+                        }
+                      }
+                    }
                   }
                   case _ => {
                     state.agent.to match {
@@ -173,17 +211,14 @@ object AgentActor {
                     }
                   }
                 }
-
-
                 sendStateToUser(wsUserTopic, updated.agent.asJson)
                 ProcessMessages()
               })
           }
           case ProcessMessageActor.ProcessedFailure(message, error) => {
             Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
-              .thenReply(context.self)(updated => {
-                sendStateToUser(wsUserTopic, updated.agent.asJson)
-                ProcessMessages()
+              .thenReply(wsUserTopic)(updated => {
+                Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
               })
           }
         }
@@ -197,11 +232,11 @@ object AgentActor {
   private def handlerEvent(state: State, event: Event): State = {
     event match {
       case Created(agent) => state.copy(agent)
-      case Updated(agent) => state.copy(agent = state.agent.copy(
+      case Updated(agent) => state.copy(state.agent.copy(
         title = agent.title,
         description = agent.description,
-        transformerScript = agent.transformerScript,
-        conditionScript = agent.conditionScript,
+        dataScript = agent.dataScript,
+        ifscript = agent.ifscript,
         from = agent.from,
         to = agent.to,
         to2 = agent.to2,
@@ -209,18 +244,28 @@ object AgentActor {
         ordered = agent.ordered
       ))
 
-      case AddedToProcess(topicMessage) => state.copy(agent = state.agent.copy(
-        error = state.agent.error.filter(_ != topicMessage.id)))
+      case CleanProcessing() => state.copy(state.agent.copy(
+        waiting = (state.agent.processing ++ state.agent.waiting),
+        processing = Queue()
+      ))
 
-      case InProcessing(topicMessage) => state.copy(agent = state.agent.copy(
-        processing = state.agent.processing :+ topicMessage.id,
-        error = state.agent.error.filter(_ != topicMessage.id)))
+      case AddedToProcess(message) => state.copy(state.agent.copy(
+        error = state.agent.error.filter(_.id != message.id),
+        waiting = state.agent.waiting :+ message))
 
-      case ProcessedSuccessfull(message) => state.copy(agent = state.agent.copy(
+      case Processing(message) => state.copy(state.agent.copy(
+        processing = state.agent.processing :+ message,
+        waiting = state.agent.waiting.filter(_.id != message.id),
+        error = state.agent.error.filter(_.id != message.id)))
+
+      case ProcessedSuccessfull(message) => state.copy(state.agent.copy(
         success = state.agent.success :+ message.id,
-        processing = state.agent.processing.filter(_ != message.id)))
-      case ProcessedFailure(message, error) => state.copy(agent = state.agent.copy(error = (state.agent.error :+ message),
-        processing = state.agent.processing - message.id))
+        error = state.agent.error.filter(_.id != message.id),
+        processing = state.agent.processing.filter(_.id != message.id)))
+
+      case ProcessedFailure(message, _) => state.copy(state.agent.copy(
+        error = state.agent.error :+ message,
+        processing = state.agent.processing.filter(_.id != message.id)))
     }
   }
 

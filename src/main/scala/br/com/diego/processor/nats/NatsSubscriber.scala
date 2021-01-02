@@ -10,12 +10,13 @@ import org.slf4j.LoggerFactory
 object NatsSubscriber {
   private val log = LoggerFactory.getLogger(NatsSubscriber.getClass)
 
-  def apply(connection: StreamingConnection, queue: String, uuid: String, ordered: Boolean, receiveMessageActor: ActorRef[ReceiveMessageActor.Command]): NatsSubscriber
-  = new NatsSubscriber(connection, queue, uuid, ordered, receiveMessageActor)
+  def apply(connection: StreamingConnection, queue: String, uuid: String, receiveMessageActor: ActorRef[ReceiveMessageActor.Command]): NatsSubscriber
+  = new NatsSubscriber(connection, queue, uuid, receiveMessageActor)
 }
 
-class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String, ordered: Boolean, receiveMessageActor: ActorRef[ReceiveMessageActor.Command]) {
+class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String, receiveMessageActor: ActorRef[ReceiveMessageActor.Command]) {
   log.info(s"Subscrevendo na fila $queue uid $uuid")
+
   connection.subscribe(queue, (msg: Message) => {
     log.info(s"Recebeu mensagem $msg na fila $queue")
     receiveMessageActor ! ReceiveMessageActor.ReceiveMessage(msg)

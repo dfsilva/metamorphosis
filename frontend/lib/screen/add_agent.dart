@@ -22,7 +22,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
-    this._agent = widget.agent ?? Agent(transformerScript: "def messageToBeProcessed = message");
+    this._agent = widget.agent ?? Agent(dataScript: "def messageToBeProcessed = message");
   }
 
   @override
@@ -138,14 +138,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: CodeEditor(
                           model: EditorModel(
-                            files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.conditionScript)],
+                            files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.ifscript)],
                             styleOptions: new EditorModelStyleOptions(
                               fontSize: 13,
                             ),
                           ),
                           disableNavigationbar: false,
                           onSubmit: (String language, String value) {
-                            this._agent = this._agent.copyWith(conditionScript: value);
+                            this._agent = this._agent.copyWith(ifscript: value);
                           }),
                     )
                         : SizedBox.shrink(),
@@ -167,14 +167,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                         child: CodeEditor(
                             model: EditorModel(
-                              files: [FileEditor(name: "Transformation Script", language: "java", code: _agent.transformerScript)],
+                              files: [FileEditor(name: "Transformation Script", language: "java", code: _agent.dataScript)],
                               styleOptions: new EditorModelStyleOptions(
                                 fontSize: 13,
                               ),
                             ),
                             disableNavigationbar: false,
                             onSubmit: (String language, String value) {
-                              this._agent = this._agent.copyWith(transformerScript: value);
+                              this._agent = this._agent.copyWith(dataScript: value);
                             })),
                   ],
                 )),

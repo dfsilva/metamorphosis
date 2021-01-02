@@ -4,8 +4,8 @@ class Agent {
   final String uuid;
   final String title;
   final String description;
-  final String transformerScript;
-  final String conditionScript;
+  final String dataScript;
+  final String ifscript;
   final String from;
   final String to;
   final String to2;
@@ -13,16 +13,16 @@ class Agent {
   final String agentType;
   final bool ordered;
   final List<TopicMessage> waiting;
-  final Map<String, TopicMessage> processing;
+  final List<TopicMessage> processing;
   final List<TopicMessage> error;
-  final Map<String, TopicMessage> success;
+  final List<String> success;
 
   Agent(
       {this.uuid,
       this.title,
       this.description,
-      this.transformerScript,
-      this.conditionScript,
+      this.dataScript,
+      this.ifscript,
       this.from,
       this.to,
       this.to2,
@@ -30,17 +30,17 @@ class Agent {
       this.agentType = "D",
       this.ordered = false,
       this.waiting = const <TopicMessage>[],
-      this.processing = const <String, TopicMessage>{},
+      this.processing = const <TopicMessage>[],
       this.error = const <TopicMessage>[],
-      this.success = const <String, TopicMessage>{}});
+      this.success = const <String>[]});
 
   static Agent fromJson(Map<String, Object> json) {
     return Agent(
       uuid: json["uuid"],
       title: json["title"],
       description: json["description"],
-      transformerScript: json["transformerScript"],
-      conditionScript: json["conditionScript"],
+      dataScript: json["dataScript"],
+      ifscript: json["ifscript"],
       from: json["from"],
       to: json["to"],
       to2: json["to2"],
@@ -48,18 +48,10 @@ class Agent {
       agentType: json["agentType"],
       ordered: json["ordered"] as bool,
       waiting: json["waiting"] != null ? (json["waiting"] as Iterable).map((e) => TopicMessage.fromJson(e)).toList() : const <TopicMessage>[],
-      processing: json["processing"] != null
-          ? Map.from(json["processing"]).map<String, TopicMessage>((key, value) => MapEntry(key, TopicMessage.fromJson(value)))
-          : const <String, TopicMessage>{},
+      processing: json["processing"] != null ? (json["processing"] as Iterable).map((e) => TopicMessage.fromJson(e)).toList() : const <TopicMessage>[],
       error: json["error"] != null ? (json["error"] as Iterable).map((e) => TopicMessage.fromJson(e)).toList() : const <TopicMessage>[],
-      success: json["success"] != null
-          ? Map.from(json["success"]).map<String, TopicMessage>((key, value) => MapEntry(key, TopicMessage.fromJson(value)))
-          : const <String, TopicMessage>{},
+      success: json["success"] != null ? (json["success"] as Iterable).map((v) => v.toString()).toList() : const <String>[],
     );
-  }
-
-  Map<String, Object> toJson() {
-    return {"title": this.title, "description": this.description, "code": this.transformerScript, "from": this.from, "to": this.to};
   }
 
   String getTo() {
@@ -75,31 +67,31 @@ class Agent {
   Agent copyWith(
           {String title,
           String description,
-          String transformerScript,
-          String conditionScript,
+          String dataScript,
+          String ifscript,
           String from,
           String to,
           String to2,
           String status,
           String agentType,
           bool ordered,
-          List<TopicMessage> waiting,
-          Map<String, TopicMessage> processing,
-          List<TopicMessage> error,
-          Map<String, TopicMessage> success}) =>
+          List<TopicMessage> queue,
+          List<String> processing,
+          List<String> error,
+          List<String> success}) =>
       Agent(
           uuid: this.uuid,
           title: title ?? this.title,
           description: description ?? this.description,
-          transformerScript: transformerScript ?? this.transformerScript,
-          conditionScript: conditionScript ?? this.conditionScript,
+          dataScript: dataScript ?? this.dataScript,
+          ifscript: ifscript ?? this.ifscript,
           from: from ?? this.from,
           to: to ?? this.to,
           to2: to2 ?? this.to2,
           status: status ?? this.status,
           agentType: agentType ?? this.agentType,
           ordered: ordered != null ? ordered : this.ordered,
-          waiting: waiting ?? this.waiting,
+          waiting: queue ?? this.waiting,
           processing: processing ?? this.processing,
           error: error ?? this.error,
           success: success ?? this.success);
