@@ -22,7 +22,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   @override
   void initState() {
     super.initState();
-    this._agent = widget.agent ?? Agent(dataScript: "def messageToBeProcessed = message");
+    this._agent = widget.agent ?? Agent(dataScript: "def messageToBeProcessed = message", ifscript: "return true");
   }
 
   @override
@@ -69,7 +69,6 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         decoration: InputDecoration(hintText: "description", labelText: "description"),
                       ),
                     ),
-
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                       child: Row(
@@ -101,8 +100,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                           },
                           onSaved: (type) {
                             this._agent = this._agent.copyWith(agentType: type);
-                          }
-                      ),
+                          }),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
@@ -130,44 +128,44 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         onSaved: (to) {
                           this._agent = this._agent.copyWith(to: to);
                         },
-                        decoration: InputDecoration(hintText: "to topic", labelText: "to"),
+                        decoration: InputDecoration(hintText: "destiny topic 0", labelText: "topic0"),
                       ),
                     ),
                     (_agent.agentType == "C")
                         ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: CodeEditor(
-                          model: EditorModel(
-                            files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.ifscript)],
-                            styleOptions: new EditorModelStyleOptions(
-                              fontSize: 13,
+                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            child: TextFormField(
+                              keyboardType: TextInputType.text,
+                              autofocus: true,
+                              initialValue: _agent.to2,
+                              onSaved: (to2) {
+                                this._agent = this._agent.copyWith(to2: to2);
+                              },
+                              decoration: InputDecoration(hintText: "destiny topic 1", labelText: "topic1"),
                             ),
-                          ),
-                          disableNavigationbar: false,
-                          onSubmit: (String language, String value) {
-                            this._agent = this._agent.copyWith(ifscript: value);
-                          }),
-                    )
+                          )
                         : SizedBox.shrink(),
                     (_agent.agentType == "C")
                         ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: TextFormField(
-                        keyboardType: TextInputType.text,
-                        autofocus: true,
-                        initialValue: _agent.to2,
-                        onSaved: (to2) {
-                          this._agent = this._agent.copyWith(to2: to2);
-                        },
-                        decoration: InputDecoration(hintText: "to topic 1", labelText: "to topic 1"),
-                      ),
-                    )
+                            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            child: CodeEditor(
+                                model: EditorModel(
+                                  files: [FileEditor(name: "Conditional Script", language: "java", code: _agent.ifscript)],
+                                  styleOptions: new EditorModelStyleOptions(
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                disableNavigationbar: false,
+                                onSubmit: (String language, String value) {
+                                  this._agent = this._agent.copyWith(ifscript: value);
+                                }),
+                          )
                         : SizedBox.shrink(),
                     Padding(
                         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                         child: CodeEditor(
                             model: EditorModel(
-                              files: [FileEditor(name: "Transformation Script", language: "java", code: _agent.dataScript)],
+                              files: [FileEditor(name: "Data Script", language: "java", code: _agent.dataScript)],
                               styleOptions: new EditorModelStyleOptions(
                                 fontSize: 13,
                               ),
@@ -179,10 +177,12 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                   ],
                 )),
           ),
+
+
           Padding(
             padding: const EdgeInsets.only(bottom: 20, top: 10),
             child: RaisedButton(
-                child: Text("Salvar"),
+                child: Text("Save"),
                 onPressed: () {
                   if (_formKey.currentState.validate()) {
                     _formKey.currentState.save();

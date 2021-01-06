@@ -239,6 +239,7 @@ class _GraphAgentsState extends State<GraphAgents> {
   @override
   Widget build(BuildContext context) {
     if (widget.agents.isEmpty) return Center(child: Text("There is nothing to show"));
+
     return SingleChildScrollView(
       child: Column(
         children: [

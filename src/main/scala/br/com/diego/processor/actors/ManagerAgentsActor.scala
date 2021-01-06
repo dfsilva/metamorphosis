@@ -66,7 +66,11 @@ object ManagerAgentsActor {
     command match {
       case StartSubscribers() => {
         log.info(s"Inicializando Manager ${state.agents}")
-        _start(state, context)
+        state.agents.foreach(pw => {
+          val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, pw)
+          entityRef ! AgentActor.StartSubscriber()
+        })
+        Effect.none
       }
 
       case AddUpdateAgent(agent, replyTo) => {
@@ -98,6 +102,7 @@ object ManagerAgentsActor {
             Effect.persist(AgentAdded(agent))
               .thenReply(replyTo)(updated => {
                 val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, uuid)
+                entityRef ! AgentActor.StartSubscriber()
                 entityRef ! AgentActor.ProcessMessages()
                 StatusReply.success(ActorResponse[AgentState](agent))
               })
@@ -114,13 +119,6 @@ object ManagerAgentsActor {
     }
   }
 
-  def _start(state: State, context: ActorContext[ManagerAgentsActor.Command]): Effect[Event, State] = {
-    state.agents.foreach(pw => {
-      val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, pw)
-      entityRef ! AgentActor.StartSubscriber()
-    })
-    Effect.none
-  }
 
   private def handlerEvent(state: State, event: Event): State = {
     event match {

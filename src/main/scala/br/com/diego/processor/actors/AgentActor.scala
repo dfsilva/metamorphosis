@@ -94,11 +94,8 @@ object AgentActor {
     Behaviors.setup[Command] { context =>
 
       val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
-
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]] =
         context.spawn(Topic[WsUserActor.OutcommingMessage](WsUserActor.TopicName), WsUserActor.TopicName)
-
-      context.self ! StartSubscriber()
 
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("Processor", agentId),
@@ -129,8 +126,7 @@ object AgentActor {
         log.info(s"Iniciando subscriber $uuid")
         Effect.persist(CleanProcessing()).thenReply(context.self)(updated => {
           sendStateToUser(wsUserTopic, updated.agent.asJson)
-          val receiveMessageActor = context.spawn(ReceiveMessageActor(uuid), s"ReceiveMessage_$uuid")
-          NatsSubscriber(streamingConnection, state.agent.from, uuid, receiveMessageActor)
+          NatsSubscriber(streamingConnection, state.agent.from, uuid)
           ProcessMessages()
         })
       }

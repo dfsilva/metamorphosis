@@ -1,7 +1,7 @@
 package br.com.diego.processor.actors
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, PostStop}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.domains.TopicMessage
@@ -24,7 +24,7 @@ object ReceiveMessageActor {
     val adapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgentResponse(rsp))
     Behaviors.receiveMessage[ReceiveMessageActor.Command] {
       case ReceiveMessage(msg) => {
-        log.info("ProcessMessage")
+        log.info(s"Receiving message ${msg.getSequence}")
         val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, agentUid)
         entityRef ! AgentActor.AddToProcess(message = TopicMessage(id = msg.getSequence.toString, content = new String(msg.getData), created = new Date().getTime),
           natsMessage = msg,
@@ -34,11 +34,16 @@ object ReceiveMessageActor {
       case response: AgentResponse =>
         response.response match {
           case AgentActor.AddToProcessResponse(natsMessage) => {
-            log.info("AddToProcesssResponse")
+            log.info(s"Message added ${natsMessage.getSequence}")
             natsMessage.ack()
-            Behaviors.same
+            Behaviors.stopped
           }
         }
+    }.receiveSignal {
+      case (context, PostStop) =>
+        context.log.info(s"Receive message actor stopped ${agentUid}")
+        Behaviors.same
+
     }
   }
 

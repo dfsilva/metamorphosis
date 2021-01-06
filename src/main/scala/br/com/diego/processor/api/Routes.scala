@@ -2,7 +2,7 @@ package br.com.diego.processor.api
 
 import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern.Askable
-import akka.actor.typed.{ActorRef, ActorSystem}
+import akka.actor.typed.{ActorRef, Props, SpawnProtocol}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.model.StatusCodes.InternalServerError
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
@@ -12,32 +12,29 @@ import akka.pattern.StatusReply
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
-import akka.util.Timeout
 import br.com.diego.processor.actors.WsUserActor._
-import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor, WsUserFactoryActor}
+import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
-class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.Command])
-  extends FailFastCirceSupport with CirceJsonProtocol {
+object Routes {
+  def apply() = new Routes()
+}
+
+class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
 
   import akka.http.scaladsl.server._
   import Directives._
+  import br.com.diego.processor.Main._
   import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
-
-  implicit val timeout: Timeout = Timeout.create(system.settings.config.getDuration("server.askTimeout"))
-  implicit val scheduler = system.scheduler
-  implicit val executionContext = system.executionContext
-  implicit val classicSystem = system.classicSystem
-
   private val sharding = ClusterSharding(system)
 
   val errorHandler = ExceptionHandler {
@@ -150,8 +147,8 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
     import io.circe.generic.auto._
     import io.circe.syntax._
 
-    val wsConCreated: WsUserFactoryActor.Created = Await.result(wsConCreator.ask(replyTo => WsUserFactoryActor.CreateWsCon(replyTo)), 2.seconds)
-    val wsUser = wsConCreated.userActor
+    val wsUserFut: Future[ActorRef[WsUserActor.Command]] = system.ask(SpawnProtocol.Spawn(behavior = WsUserActor(), name = "", props = Props.empty, _))
+    val wsUser = Await.result(wsUserFut, Duration.Inf)
 
     val sink: Sink[Message, NotUsed] =
       Flow[Message].collect {
@@ -188,5 +185,6 @@ class Routes(system: ActorSystem[_], wsConCreator: ActorRef[WsUserFactoryActor.C
         .keepAlive(maxIdle = 10.seconds, () => TextMessage.Strict("{\"message\": \"keep-alive\"}"))
 
     Flow.fromSinkAndSource(sink, source)
+
   }
 }
