@@ -20,6 +20,7 @@ libraryDependencies ++= {
     akka %% "akka-persistence-typed" % akkaV,
     akka %% "akka-persistence-query" % akkaV,
     akka %% "akka-persistence-cassandra" % "1.0.4",
+    "com.datastax.oss" % "java-driver-core" % "4.6.1",
 
     akka %% "akka-slf4j" % akkaV,
     akka %% "akka-http" % akkaHttpV,

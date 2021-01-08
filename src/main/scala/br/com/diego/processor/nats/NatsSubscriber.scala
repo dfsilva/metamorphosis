@@ -31,7 +31,9 @@ object NatsSubscriber {
 }
 
 class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String) {
+
   import br.com.diego.processor.Main._
+
   log.info(s"Subscrevendo na fila $queue uid $uuid")
   val subscription = connection.subscribe(queue, (msg: Message) => {
     log.info(s"Recebeu mensagem $msg na fila $queue")

@@ -8,6 +8,8 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityType
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
+import akka.stream.alpakka.cassandra.CassandraSessionSettings
+import akka.stream.alpakka.cassandra.scaladsl.CassandraSessionRegistry
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage, Types}
@@ -21,7 +23,6 @@ import org.slf4j.LoggerFactory
 import java.util.Date
 import scala.collection.immutable.Queue
 import scala.concurrent.duration._
-
 
 object AgentActor {
 
@@ -142,6 +143,8 @@ object AgentActor {
       }
 
       case ProcessMessages() => {
+        log.info(s"Processsing messages agent ${state.agent.title}")
+        log.info(s"waiting ${state.agent.waiting.length}, processing ${state.agent.processing.length}")
         if (!state.agent.ordered || state.agent.processing.isEmpty) {
           (state.agent.error ++ state.agent.waiting).headOption match {
             case Some(message) => Effect.reply(context.self)(ProcessMessage(message))
@@ -153,7 +156,7 @@ object AgentActor {
       }
 
       case ProcessMessage(message) => {
-        log.info(s"Processando mensagem $message")
+        log.info(s"Processing message $message")
         Effect.persist(Processing(message)).thenReply(context.self)(updated => {
           sendStateToUser(wsUserTopic, updated.agent.asJson)
           context.spawn(ProcessMessageActor(), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessage(message, state.agent.dataScript, state.agent.ifscript, processActor)
@@ -178,36 +181,62 @@ object AgentActor {
       case processActor: ProcessMessageResponse =>
         processActor.response match {
           case ProcessMessageActor.ProcessedSuccess(message, result, ifResult) => {
-            Effect.persist(ProcessedSuccessfull(message.copy(result = Some(result), ifResult = ifResult, processed = Some(new Date().getTime))))
+            val topicMessageUpdated = message.copy(result = Some(result), ifResult = ifResult, processed = Some(new Date().getTime))
+
+            Effect.persist(ProcessedSuccessfull(topicMessageUpdated))
               .thenReply(context.self)(updated => {
-                state.agent.agentType match {
+                val deliveredTo = state.agent.agentType match {
                   case Types.Conditional => {
                     ifResult match {
                       case Some(ifValue) => {
                         if (ifValue.equalsIgnoreCase("true") || ifValue.equalsIgnoreCase("1")) {
                           state.agent.to match {
-                            case Some(value) => NatsPublisher(streamingConnection, value, result)
+                            case Some(value) => {
+                              NatsPublisher(streamingConnection, value, result)
+                              value
+                            }
                           }
                         } else {
                           state.agent.to2 match {
-                            case Some(value) => NatsPublisher(streamingConnection, value, result)
+                            case Some(value) => {
+                              NatsPublisher(streamingConnection, value, result)
+                              value
+                            }
                           }
                         }
                       }
                       case _ => {
                         state.agent.to match {
-                          case Some(value) => NatsPublisher(streamingConnection, value, result)
+                          case Some(value) => {
+                            NatsPublisher(streamingConnection, value, result)
+                            value
+                          }
                         }
                       }
                     }
                   }
                   case _ => {
                     state.agent.to match {
-                      case Some(value) => NatsPublisher(streamingConnection, value, result)
+                      case Some(value) => {
+                        NatsPublisher(streamingConnection, value, result)
+                        value
+                      }
                     }
                   }
                 }
                 sendStateToUser(wsUserTopic, updated.agent.asJson)
+                val session = CassandraSessionRegistry(context.system).sessionFor(CassandraSessionSettings())
+                session.executeWrite("INSERT INTO events_processor_tables.delivered_messages(id,content,ifResult,result,created,processed,deliveredTo,fromQueue,agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  topicMessageUpdated.id,
+                  topicMessageUpdated.content,
+                  topicMessageUpdated.ifResult.getOrElse(""),
+                  topicMessageUpdated.result.getOrElse(""),
+                  Long.box(topicMessageUpdated.created),
+                  Long.box(topicMessageUpdated.processed.getOrElse(-1L)),
+                  deliveredTo,
+                  updated.agent.from,
+                  updated.agent.uuid.get)
+
                 ProcessMessages()
               })
           }

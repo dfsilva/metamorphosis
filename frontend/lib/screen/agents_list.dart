@@ -33,7 +33,11 @@ class _AgentsListState extends State<AgentsList> {
                   title: Row(
                     children: [Text(agent.title), Text(agent.agentType == "D" ? " - (Default)" : " - (Conditional)")],
                   ),
-                  subtitle: Text(agent.description),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [Text(agent.uuid, style: TextStyle(fontSize: 10)), Text(agent.description)],
+                  ),
                   trailing: PopupMenuButton<int>(
                     onSelected: (selected) {
                       switch (selected) {
