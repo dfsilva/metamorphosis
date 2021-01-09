@@ -11,6 +11,7 @@ libraryDependencies ++= {
   val akkaV = "2.6.10"
   val akkaHttpV = "10.2.1"
   val circeVersion = "0.13.0"
+  val slickVersion = "3.3.2"
   Seq(
     akka %% "akka-actor-typed" % akkaV,
     akka %% "akka-stream-typed" % akkaV,
@@ -19,8 +20,14 @@ libraryDependencies ++= {
     akka %% "akka-serialization-jackson" % akkaV,
     akka %% "akka-persistence-typed" % akkaV,
     akka %% "akka-persistence-query" % akkaV,
-    akka %% "akka-persistence-cassandra" % "1.0.4",
-    "com.datastax.oss" % "java-driver-core" % "4.6.1",
+    "com.lightbend.akka" %% "akka-persistence-jdbc" % "4.0.0",
+    "com.typesafe.slick" %% "slick" % slickVersion,
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+    "com.github.tminglei" %% "slick-pg" % "0.19.4",
+    "com.github.tminglei" %% "slick-pg_circe-json" % "0.19.4",
+
+    "org.flywaydb" % "flyway-core" % "7.2.0",
+    "org.postgresql" % "postgresql" % "42.2.18",
 
     akka %% "akka-slf4j" % akkaV,
     akka %% "akka-http" % akkaHttpV,

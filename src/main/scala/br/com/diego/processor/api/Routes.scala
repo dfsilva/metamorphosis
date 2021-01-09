@@ -9,6 +9,7 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.util.FastFuture
 import akka.pattern.StatusReply
+import akka.persistence.jdbc.db.SlickExtension
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.typed.scaladsl.{ActorSink, ActorSource}
@@ -16,7 +17,7 @@ import br.com.diego.processor.actors.WsUserActor._
 import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
-import br.com.diego.processor.repo.DeliveredMessagesRepository
+import br.com.diego.processor.repo.DeliveredMessagesRepo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
 
@@ -33,10 +34,12 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
   import Directives._
   import br.com.diego.processor.Main._
   import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
+  import br.com.diego.processor.repo.PostgresProfile._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
   private val sharding = ClusterSharding(system)
+  private val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
 
   val errorHandler = ExceptionHandler {
     case ex =>
@@ -62,7 +65,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
                     concat(
                       pathPrefix("messages") {
                         get {
-                          complete(DeliveredMessagesRepository(system).listByAgent(id))
+                          complete(database.run(DeliveredMessagesRepo.loadByAgent(id)))
                         }
                       },
                       get {

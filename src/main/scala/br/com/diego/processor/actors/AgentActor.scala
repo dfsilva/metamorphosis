@@ -6,13 +6,15 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, SupervisorStrategy}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.pattern.StatusReply
+import akka.persistence.jdbc.db.SlickExtension
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import br.com.diego.processor.CborSerializable
+import br.com.diego.processor.Main.system
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
-import br.com.diego.processor.repo.DeliveredMessagesRepository
+import br.com.diego.processor.repo.{DeliveredMessage, DeliveredMessagesRepo}
 import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -183,7 +185,19 @@ object AgentActor {
             Effect.persist(ProcessedSuccessfull(message))
               .thenReply(context.self)(updated => {
 
-                Await.result(DeliveredMessagesRepository(context.system).insert(state.agent.uuid.get, state.agent.from, message), 5.seconds)
+                val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
+                Await.result(database.run(DeliveredMessagesRepo.add(DeliveredMessage(
+                  id = message.id,
+                  content = message.content,
+                  ifResult = message.ifResult.getOrElse(""),
+                  result = message.result.getOrElse(""),
+                  created = message.created,
+                  processed = message.processed.getOrElse(0),
+                  deliveredTo = message.deliveredTo,
+                  fromQueue = state.agent.from,
+                  agent = state.agent.uuid.get
+                ))), 5.seconds)
+
                 sendStateToUser(wsUserTopic, updated.agent.asJson)
                 ProcessMessages()
               })

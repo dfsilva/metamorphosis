@@ -1,68 +1,25 @@
 version: "3.5"
 
 services:
-  cassandra-seed:
-    image: cassandra:latest
+  postgres:
+    image: postgres:13.1
     ports:
-      - "9042:9042"
-    volumes:
-      - "cassandra_data_seed:/var/lib/cassandra"
+      - '5432:5432'
     environment:
-      - "CASSANDRA_SEEDS=cassandra-seed"
-      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-      - "CASSANDRA_DC=se1"
-      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-  #    restart: always
-
-#  cassandra1:
-#    image: cassandra:latest
-#    volumes:
-#      - "cassandra_data_1:/var/lib/cassandra"
-#    environment:
-#      - "CASSANDRA_SEEDS=cassandra-seed"
-#      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-#      #      needed for setting up custom cluster name
-#      - "CASSANDRA_DC=se1"
-#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-#    depends_on:
-#      - cassandra-seed
-#  #    restart: always
-#
-#  cassandra2:
-#    image: cassandra:latest
-#    volumes:
-#      - "cassandra_data_2:/var/lib/cassandra"
-#    environment:
-#      - "CASSANDRA_SEEDS=cassandra-seed"
-#      - "CASSANDRA_CLUSTER_NAME=Test Cluster"
-#      #      needed for setting up custom cluster name
-#      - "CASSANDRA_DC=se1"
-#      - "CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch"
-#    depends_on:
-#      - cassandra-seed
-#  #    restart: always
-
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
   nats:
     image: nats-streaming
     ports:
       - "4222:4222"
       - "8222:8222"
     networks: [ "nats" ]
-#  nats-1:
-#    image: nats
-#    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
-#    networks: [ "br.com.diego.processor.nats" ]
-#    depends_on: [ "br.com.diego.processor.nats" ]
-#  nats-2:
-#    image: br.com.diego.processor.nats
-#    command: "--cluster br.com.diego.processor.nats://0.0.0.0:6222 --routes=br.com.diego.processor.nats://ruser:T0pS3cr3t@br.com.diego.processor.nats:6222"
-#    networks: [ "br.com.diego.processor.nats" ]
-#    depends_on: [ "br.com.diego.processor.nats" ]
 
 volumes:
-  cassandra_data_seed:
-  cassandra_data_1:
-  cassandra_data_2:
+  postgres_data:
 
 networks:
   nats:
