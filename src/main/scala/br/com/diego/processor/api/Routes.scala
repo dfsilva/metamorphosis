@@ -16,6 +16,7 @@ import br.com.diego.processor.actors.WsUserActor._
 import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
+import br.com.diego.processor.repo.DeliveredMessagesRepository
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
 
@@ -57,15 +58,21 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
             concat(
               pathPrefix("agent") {
                 concat(
-                  get {
-                    pathPrefix(Segment) { id: String =>
-                      val entityRef = sharding.entityRefFor(AgentActor.EntityKey, id)
-                      onSuccess(entityRef.ask(AgentActor.GetDetails)) { response =>
-                        complete(response)
+                  pathPrefix(Segment) { id: String =>
+                    concat(
+                      pathPrefix("messages") {
+                        get {
+                          complete(DeliveredMessagesRepository(system).listByAgent(id))
+                        }
+                      },
+                      get {
+                        val entityRef = sharding.entityRefFor(AgentActor.EntityKey, id)
+                        onSuccess(entityRef.ask(AgentActor.GetDetails)) { response =>
+                          complete(response)
+                        }
                       }
-                    }
+                    )
                   },
-
                   pathPrefix(Segment) { uuid =>
                     post {
                       entity(as[AddUpdateAgent]) { data =>
@@ -116,7 +123,6 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
                       }
                     }
                   },
-
                 )
               },
 

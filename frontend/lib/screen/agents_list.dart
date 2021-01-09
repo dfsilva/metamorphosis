@@ -2,6 +2,7 @@ import 'package:code_editor/code_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:nats_message_processor_client/dto/agent.dart';
 import 'package:nats_message_processor_client/screen/add_agent.dart';
+import 'package:nats_message_processor_client/screen/list_processed_messages.dart';
 import 'package:nats_message_processor_client/screen/list_topic_messages.dart';
 
 class AgentsList extends StatefulWidget {
@@ -36,7 +37,7 @@ class _AgentsListState extends State<AgentsList> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
-                    children: [Text(agent.uuid, style: TextStyle(fontSize: 10)), Text(agent.description)],
+                    children: [Text(agent.uuid, style: TextStyle(fontSize: 10)), Text("Ordered: ${agent.ordered}"), Text(agent.description)],
                   ),
                   trailing: PopupMenuButton<int>(
                     onSelected: (selected) {
@@ -118,7 +119,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: []),
+                                    child: ListProcessedMessages(agenteUid: agent.uuid),
                                   ));
                         },
                       ),

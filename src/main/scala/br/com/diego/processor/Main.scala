@@ -68,7 +68,7 @@ object Guardian {
         fromQueue text,
         agent text,
         PRIMARY KEY ((id, created, processed))
-      )
+      );
       """
 
     log.info("Created events_processor_tables keyspace")

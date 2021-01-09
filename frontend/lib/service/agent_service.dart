@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:nats_message_processor_client/bus/actions.dart';
 import 'package:nats_message_processor_client/dto/add_update_agente_req.dart';
 import 'package:nats_message_processor_client/dto/agent.dart';
+import 'package:nats_message_processor_client/dto/processed_message.dart';
 import 'package:nats_message_processor_client/service/base_service.dart';
 import 'package:nats_message_processor_client/store/agent_store.dart';
 import 'package:nats_message_processor_client/utils/http_utils.dart';
@@ -23,6 +24,10 @@ class ProcessorService extends BaseService<AgentStore> {
           .then((value) => bus().send(SetAgent(value)).agent)
           .whenComplete(() => bus().send(HideHud()));
     }
+  }
+
+  Future<List<ProcessedMessage>> processedMessages(String agentId) {
+    return Api.doGet(uri: "/agent/${agentId}/messages").then((value) => (value as Iterable).map((e) => ProcessedMessage.fromJson(e)).toList());
   }
 
   @override

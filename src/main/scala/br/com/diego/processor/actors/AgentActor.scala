@@ -8,20 +8,19 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityType
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
-import akka.stream.alpakka.cassandra.CassandraSessionSettings
-import akka.stream.alpakka.cassandra.scaladsl.CassandraSessionRegistry
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.api.OutcomeWsMessage
-import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage, Types}
-import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher, NatsSubscriber}
+import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
+import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
+import br.com.diego.processor.repo.DeliveredMessagesRepository
 import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.nats.streaming.{Message, StreamingConnection}
 import org.slf4j.LoggerFactory
 
-import java.util.Date
 import scala.collection.immutable.Queue
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object AgentActor {
@@ -159,7 +158,7 @@ object AgentActor {
         log.info(s"Processing message $message")
         Effect.persist(Processing(message)).thenReply(context.self)(updated => {
           sendStateToUser(wsUserTopic, updated.agent.asJson)
-          context.spawn(ProcessMessageActor(), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessage(message, state.agent.dataScript, state.agent.ifscript, processActor)
+          context.spawn(ProcessMessageActor(streamingConnection), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessageStep1(message, state.agent.dataScript, state.agent.ifscript, state.agent.to, state.agent.to2, processActor)
           if (!state.agent.ordered) {
             log.info(s"Agente não ordenado $message")
             ProcessMessages()
@@ -180,63 +179,12 @@ object AgentActor {
 
       case processActor: ProcessMessageResponse =>
         processActor.response match {
-          case ProcessMessageActor.ProcessedSuccess(message, result, ifResult) => {
-            val topicMessageUpdated = message.copy(result = Some(result), ifResult = ifResult, processed = Some(new Date().getTime))
-
-            Effect.persist(ProcessedSuccessfull(topicMessageUpdated))
+          case ProcessMessageActor.ProcessedSuccess(message) => {
+            Effect.persist(ProcessedSuccessfull(message))
               .thenReply(context.self)(updated => {
-                val deliveredTo = state.agent.agentType match {
-                  case Types.Conditional => {
-                    ifResult match {
-                      case Some(ifValue) => {
-                        if (ifValue.equalsIgnoreCase("true") || ifValue.equalsIgnoreCase("1")) {
-                          state.agent.to match {
-                            case Some(value) => {
-                              NatsPublisher(streamingConnection, value, result)
-                              value
-                            }
-                          }
-                        } else {
-                          state.agent.to2 match {
-                            case Some(value) => {
-                              NatsPublisher(streamingConnection, value, result)
-                              value
-                            }
-                          }
-                        }
-                      }
-                      case _ => {
-                        state.agent.to match {
-                          case Some(value) => {
-                            NatsPublisher(streamingConnection, value, result)
-                            value
-                          }
-                        }
-                      }
-                    }
-                  }
-                  case _ => {
-                    state.agent.to match {
-                      case Some(value) => {
-                        NatsPublisher(streamingConnection, value, result)
-                        value
-                      }
-                    }
-                  }
-                }
-                sendStateToUser(wsUserTopic, updated.agent.asJson)
-                val session = CassandraSessionRegistry(context.system).sessionFor(CassandraSessionSettings())
-                session.executeWrite("INSERT INTO events_processor_tables.delivered_messages(id,content,ifResult,result,created,processed,deliveredTo,fromQueue,agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                  topicMessageUpdated.id,
-                  topicMessageUpdated.content,
-                  topicMessageUpdated.ifResult.getOrElse(""),
-                  topicMessageUpdated.result.getOrElse(""),
-                  Long.box(topicMessageUpdated.created),
-                  Long.box(topicMessageUpdated.processed.getOrElse(-1L)),
-                  deliveredTo,
-                  updated.agent.from,
-                  updated.agent.uuid.get)
 
+                Await.result(DeliveredMessagesRepository(context.system).insert(state.agent.uuid.get, state.agent.from, message), 5.seconds)
+                sendStateToUser(wsUserTopic, updated.agent.asJson)
                 ProcessMessages()
               })
           }
