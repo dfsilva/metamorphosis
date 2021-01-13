@@ -12,7 +12,7 @@
 
 ## Running
 
-> You need to have Docker to run this example
+> You need to have the latest version of [Docker](https://www.docker.com/) installed to run this example
 
 OS X & Linux:
 
