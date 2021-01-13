@@ -1,8 +1,12 @@
+import sbtassembly.MergeStrategy
+
 name := "metamorphosis"
 
 version := "0.0.1"
 
 scalaVersion := "2.13.4"
+
+enablePlugins(DockerPlugin)
 
 resolvers += Resolver.mavenLocal
 
@@ -46,4 +50,40 @@ libraryDependencies ++= {
     "org.codehaus.groovy" % "groovy-all" % "3.0.7" pomOnly()
   )
 }
+
+assemblyJarName in assembly := "server.jar"
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) =>
+    (xs map {_.toLowerCase}) match {
+      case ("manifest.mf" :: Nil) | ("index.list" :: Nil) | ("dependencies" :: Nil) =>
+        MergeStrategy.discard
+      case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") =>
+        MergeStrategy.discard
+      case "plexus" :: xs =>
+        MergeStrategy.discard
+      case "services" :: xs =>
+        MergeStrategy.filterDistinctLines
+      case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) =>
+        MergeStrategy.filterDistinctLines
+      case _ => MergeStrategy.discard
+    }
+  //  case PathList("META-INF/services/io.grpc.ManagedChannelProvider") => MergeStrategy.first
+  case PathList("reference.conf") => MergeStrategy.concat
+  case _ => MergeStrategy.first
+}
+
+
+dockerfile in docker := {
+  val artifact: File = assembly.value
+  val artifactTargetPath = s"/app/${artifact.name}"
+
+  new Dockerfile {
+    from("openjdk:11-jre")
+    add(artifact, artifactTargetPath)
+    entryPoint("java", "-jar", artifactTargetPath)
+  }
+}
+
+buildOptions in docker := BuildOptions(cache = false)
 

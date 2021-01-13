@@ -16,11 +16,23 @@ services:
     ports:
       - "4222:4222"
       - "8222:8222"
-    networks: [ "nats" ]
-
+  server:
+    image: default/metamorphosis
+    links:
+      - postgres:postgres
+      - nats:nats
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - nats
+    environment:
+      NATS_URL: "nats://nats:4222"
+      NATS_CLIENT_ID: teste1
+      NATS_CLUSTER_ID: test-cluster
+      HTTP_PORT: 8081
+      POSTGRES_URL: "jdbc:postgresql://postgres:5432/postgres"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
 volumes:
   postgres_data:
-
-networks:
-  nats:
-    name: nats
