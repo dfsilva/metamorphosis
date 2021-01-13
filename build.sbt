@@ -1,6 +1,6 @@
-name := "br.com.diego.processor.nats-message-processor"
+name := "metamorphosis"
 
-version := "0.1"
+version := "0.0.1"
 
 scalaVersion := "2.13.4"
 
