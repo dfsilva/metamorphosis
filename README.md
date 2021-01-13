@@ -10,41 +10,20 @@
 
 ![](header.png)
 
-## Installation
+## Running
 
-[comment]: <> (OS X & Linux:)
+> You need to have Docker to run this example
 
-[comment]: <> (```sh)
+OS X & Linux:
 
-[comment]: <> (npm install my-crazy-module --save)
+```sh
+./run.sh
+```
 
-[comment]: <> (```)
-
-[comment]: <> (Windows:)
-
-[comment]: <> (```sh)
-
-[comment]: <> (edit autoexec.bat)
-
-[comment]: <> (```)
-
-## Usage example
-
-[comment]: <> (A few motivating and useful examples of how your product can be used. Spice this up with code blocks and potentially more screenshots.)
-
-[comment]: <> (_For more examples and usage, please refer to the [Wiki][wiki]._)
-
-## Development setup
-
-[comment]: <> (Describe how to install all development dependencies and how to run an automated test-suite of some kind. Potentially do this for multiple platforms.)
-
-[comment]: <> (```sh)
-
-[comment]: <> (make install)
-
-[comment]: <> (npm test)
-
-[comment]: <> (```)
+Windows:
+```sh
+run.bat
+```
 
 ## Release History
 
