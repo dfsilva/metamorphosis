@@ -8,7 +8,8 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-![](header.png)
+![](images/screen1.png)
+![](images/screen2.png)
 
 ## Running
 

@@ -28,6 +28,7 @@ class _AgentsListState extends State<AgentsList> {
           return Card(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 ListTile(
                   leading: Icon(Icons.album),
@@ -37,7 +38,7 @@ class _AgentsListState extends State<AgentsList> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
-                    children: [Text(agent.uuid, style: TextStyle(fontSize: 10)), Text("Ordered: ${agent.ordered}"), Text(agent.description)],
+                    children: [Text(agent.description, style: TextStyle(fontSize: 10)), Text(agent.uuid, style: TextStyle(fontSize: 10)), Text("Ordered: ${agent.ordered}")],
                   ),
                   trailing: PopupMenuButton<int>(
                     onSelected: (selected) {
@@ -55,15 +56,41 @@ class _AgentsListState extends State<AgentsList> {
                     ],
                   ),
                 ),
-                CodeEditor(
-                  model: EditorModel(
-                    files: [FileEditor(name: "codigo", language: "java", code: agent.dataScript)],
-                    styleOptions: new EditorModelStyleOptions(
-                      fontSize: 13,
+                ...(agent.agentType == "C")
+                    ? [
+                        Text("Conditional Script"),
+                        Container(
+                          height: 100,
+                          child: SingleChildScrollView(
+                            child: CodeEditor(
+                              model: EditorModel(
+                                files: [FileEditor(name: "codigo", language: "java", code: agent.ifscript)],
+                                styleOptions: EditorModelStyleOptions(
+                                  fontSize: 10,
+                                ),
+                              ),
+                              disableNavigationbar: true,
+                              edit: false,
+                            ),
+                          ),
+                        )
+                      ]
+                    : [],
+                Text("Transformer Script"),
+                Container(
+                  height: 200,
+                  child: SingleChildScrollView(
+                    child: CodeEditor(
+                      model: EditorModel(
+                        files: [FileEditor(name: "codigo", language: "java", code: agent.dataScript)],
+                        styleOptions: EditorModelStyleOptions(
+                          fontSize: 13,
+                        ),
+                      ),
+                      disableNavigationbar: true,
+                      edit: false,
                     ),
                   ),
-                  disableNavigationbar: true,
-                  edit: false,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -130,8 +157,20 @@ class _AgentsListState extends State<AgentsList> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
-                    children: <Widget>[Text("FROM:   ${agent.from}"), Icon(Icons.arrow_forward), Text("TO:    ${agent.to}")],
+                    children: <Widget>[
+                      Text("FROM: ${agent.from}"),
+                      Icon(Icons.arrow_forward),
+                      (agent.agentType == "C")
+                          ? Column(
+                              children: [
+                                Text("TO (in case of true): ${agent.to}"),
+                                Text("TO (in case of false): ${agent.to2}"),
+                              ],
+                            )
+                          : Text("TO: ${agent.to}")
+                    ],
                   ),
                 ),
               ],
