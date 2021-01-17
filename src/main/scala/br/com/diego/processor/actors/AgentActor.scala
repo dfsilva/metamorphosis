@@ -148,7 +148,12 @@ object AgentActor {
         log.info(s"waiting ${state.agent.waiting.length}, processing ${state.agent.processing.length}")
         if (!state.agent.ordered || state.agent.processing.isEmpty) {
           (state.agent.error ++ state.agent.waiting).headOption match {
-            case Some(message) => Effect.reply(context.self)(ProcessMessage(message))
+            case Some(message) => {
+              Effect.persist(Processing(message)).thenReply(context.self)(updated => {
+                sendStateToUser(wsUserTopic, updated.agent.asJson)
+                ProcessMessage(message)
+              })
+            }
             case _ => Effect.none
           }
         } else {
@@ -158,15 +163,12 @@ object AgentActor {
 
       case ProcessMessage(message) => {
         log.info(s"Processing message $message")
-        Effect.persist(Processing(message)).thenReply(context.self)(updated => {
-          sendStateToUser(wsUserTopic, updated.agent.asJson)
-          context.spawn(ProcessMessageActor(streamingConnection), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessageStep1(message, state.agent.dataScript, state.agent.ifscript, state.agent.to, state.agent.to2, processActor)
-          if (!state.agent.ordered) {
-            log.info(s"Agente não ordenado $message")
-            ProcessMessages()
-          } else
-            WaitCommand()
-        })
+        context.spawn(ProcessMessageActor(streamingConnection), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessageStep1(message, state.agent.dataScript, state.agent.ifscript, state.agent.to, state.agent.to2, processActor)
+        if (!state.agent.ordered) {
+          log.info(s"Agente não ordenado $message")
+          Effect.reply(context.self)(ProcessMessages())
+        } else
+          Effect.reply(context.self)(WaitCommand())
       }
 
       case WaitCommand() => {

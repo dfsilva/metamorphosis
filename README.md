@@ -17,7 +17,7 @@
 OS X & Linux:
 
 ```sh
-./run.sh
+./run-all.sh
 ```
 
 Windows:
