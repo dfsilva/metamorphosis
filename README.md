@@ -8,8 +8,13 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-![](images/screen1.png)
-![](images/screen2.png)
+
+<table border="0">
+ <tr>
+    <td><img src="images/screen1.png"/></td>
+    <td><img src="images/screen2.png"/></td>
+ </tr>
+</table>
 
 ## Running
 
