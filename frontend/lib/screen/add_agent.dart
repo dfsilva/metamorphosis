@@ -109,7 +109,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         initialValue: _agent.from,
                         validator: (from) {
                           if (from.isEmpty) {
-                            return "Provide from queue";
+                            return "Please inform the from topic";
                           }
                           return null;
                         },

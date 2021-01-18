@@ -32,7 +32,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Events Message Transformer',
+        title: 'Metamorphosis',
         debugShowCheckedModeBanner: false,
         navigatorObservers: [BotToastNavigatorObserver()],
         navigatorKey: NavigatorUtils.nav,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nats_message_processor_client/dto/agent.dart';
 import 'package:nats_message_processor_client/screen/add_agent.dart';
 import 'package:nats_message_processor_client/screen/list_processed_messages.dart';
-import 'package:nats_message_processor_client/screen/list_topic_messages.dart';
+import 'package:nats_message_processor_client/screen/list_not_processed_messages.dart';
 
 class AgentsList extends StatefulWidget {
   final List<Agent> agents;
@@ -107,7 +107,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: agent.waiting),
+                                    child: ListNotProcessedMessages(topicMessages: agent.waiting),
                                   ));
                         },
                       ),
@@ -120,7 +120,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: agent.processing),
+                                    child: ListNotProcessedMessages(topicMessages: agent.processing),
                                   ));
                         },
                       ),
@@ -133,7 +133,7 @@ class _AgentsListState extends State<AgentsList> {
                           showDialog(
                               context: context,
                               builder: (_) => Dialog(
-                                    child: ListTopicMessages(topicMessages: agent.error),
+                                    child: ListNotProcessedMessages(topicMessages: agent.error),
                                   ));
                         },
                       ),

@@ -28,8 +28,10 @@ OS X & Linux:
 
 Windows:
 ```sh
-run.bat
+run-all.bat
 ```
+
+Access [http://localhost:8180/](http://localhost:8180/)
 
 ## Release History
 
@@ -65,5 +67,4 @@ Distributed under the MIT license. See ``LICENSE`` for more information.
 [license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/dsilva82
-[product-screenshot]: images/screenshot.png
    
