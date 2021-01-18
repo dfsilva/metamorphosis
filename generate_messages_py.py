@@ -1,4 +1,4 @@
-# Call using python3 generate_message_py.py teste topic1 "{"nome":"Auto de teste"}"
+# Call using python3 generate_messages_py.py teste topic1 "{"nome":"Auto de teste"}"
 
 import asyncio
 import sys

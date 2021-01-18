@@ -54,7 +54,15 @@ class _ListProcessedMessagesState extends State<ListProcessedMessages> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("IN: "),
-                            Flexible(child: Text(topicMessage.content, textAlign: TextAlign.left)),
+                            Flexible(child: SelectableText(topicMessage.content, textAlign: TextAlign.left, )),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Conditional OUT: "),
+                            Flexible(child: SelectableText(topicMessage.ifResult, textAlign: TextAlign.left)),
                           ],
                         ),
                         Row(
@@ -63,8 +71,17 @@ class _ListProcessedMessagesState extends State<ListProcessedMessages> {
                           children: [
                             Text("OUT: "),
                             (topicMessage.result != null && topicMessage.result.isNotEmpty)
-                                ? Flexible(child: Text(topicMessage.result, textAlign: TextAlign.left))
+                                ? Flexible(child: SelectableText(topicMessage.result, textAlign: TextAlign.left))
                                 : SizedBox.shrink(),
+                          ],
+                        ),
+                        Text("Processed: ${DateFormat('dd/MM/yyyy HH:mm:ss').format(topicMessage.processed)}"),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Delivered To: "),
+                            Flexible(child: SelectableText(topicMessage.deliveredTo, textAlign: TextAlign.left))
                           ],
                         )
                       ]),
