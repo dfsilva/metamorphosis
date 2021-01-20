@@ -5,32 +5,28 @@ import 'package:http/http.dart' as http;
 import 'package:nats_message_processor_client/utils/message.dart';
 
 class Api {
-  static const String HOST = "127.0.0.1:8082";
-  // static const String HOST = "192.168.31.9:8081";
-  static const String _URL = "http://$HOST/api";
-
-  static handleError(error) {
-    // if (error is DioError) {
-    //   if (error.response != null) {
-    //     showError(error.response.data);
-    //   } else {
-    //     if (error.error.toString().isNotEmpty)
-    //       showError(error.error.toString());
-    //     else
-    //       showError("Erro inesperado");
-    //   }
-    //   throw error;
-    // } else {
-    showError(error.message);
-    throw error;
-    // }
+  static getWsUrl() {
+    print("ws://${Uri.base.host}:${Uri.base.port}/ws");
+    return "ws://${Uri.base.host}:${Uri.base.port}/ws";
+    // return "ws://localhost:8081/ws";
   }
 
-  static Future<dynamic> doPost({String url = _URL, String uri, Map<String, dynamic> bodyParams = const {}}) async {
-    try{
+  static getApiUrl() {
+    print("${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api");
+    return "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/api";
+    // return "http://localhost:8081/api";
+  }
+
+  static handleError(error) {
+    showError(error.message);
+    throw error;
+  }
+
+  static Future<dynamic> doPost({String url, String uri, Map<String, dynamic> bodyParams = const {}}) async {
+    try {
       String currentToken = await _getUserToken();
       final response = await http.post(
-        url + uri,
+        (url ?? getApiUrl()) + uri,
         headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', "Authorization": "Token $currentToken"},
         body: json.encode(bodyParams),
       );
@@ -40,15 +36,15 @@ class Api {
       } else {
         handleError(Exception(response.body));
       }
-    }catch(e){
+    } catch (e) {
       handleError(e);
     }
   }
 
-  static Future<dynamic> doPut({String url = _URL, String uri, Map<String, dynamic> bodyParams = const {}}) async {
+  static Future<dynamic> doPut({String url, String uri, Map<String, dynamic> bodyParams = const {}}) async {
     String currentToken = await _getUserToken();
     final response = await http.put(
-      url + uri,
+      (url ?? getApiUrl()) + uri,
       headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', "Authorization": "Token $currentToken"},
       body: json.encode(bodyParams),
     );
@@ -60,11 +56,10 @@ class Api {
     }
   }
 
-  static Future<dynamic> doGet({String url = _URL, String uri, Map<String, dynamic> params = const {}}) async {
-    print(url + uri);
+  static Future<dynamic> doGet({String url, String uri, Map<String, dynamic> params = const {}}) async {
     String currentToken = await _getUserToken();
     final response = await http.get(
-      url + uri + params.entries.fold("?", (previousValue, element) => previousValue + "${element.key}=${element.value}"),
+      (url ?? getApiUrl()) + uri + params.entries.fold("?", (previousValue, element) => previousValue + "${element.key}=${element.value}"),
       headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', "Authorization": "Token $currentToken"},
     );
 

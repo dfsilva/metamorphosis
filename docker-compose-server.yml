@@ -1,8 +1,10 @@
 version: "3.5"
 
 services:
-  server:
+  node00:
     image: default/metamorphosis
+    networks:
+      - data_network
     links:
       - postgres:postgres
       - nats:nats
@@ -13,10 +15,13 @@ services:
       - postgres
       - nats
     environment:
+      CANONICAL_PORT: 2551
+      NATS_CLIENT_ID: test0
       NATS_URL: "nats://nats:4222"
-      NATS_CLIENT_ID: teste1
       NATS_CLUSTER_ID: test-cluster
       HTTP_PORT: 8081
+      CANONICAL_HOST_NAME: node00
+      SEED_NODES: akka://MetamorphosisSystem@node00:2551
       POSTGRES_URL: "jdbc:postgresql://postgres:5432/postgres"
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

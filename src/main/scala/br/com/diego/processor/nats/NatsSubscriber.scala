@@ -1,14 +1,10 @@
 package br.com.diego.processor.nats
 
-import akka.actor.typed.scaladsl.AskPattern.Askable
-import akka.actor.typed.{ActorRef, Props, SpawnProtocol}
+import akka.actor.typed.{Props, SpawnProtocol}
 import br.com.diego.processor.actors.ReceiveMessageActor
 import br.com.diego.processor.nats.NatsSubscriber.log
 import io.nats.streaming.{Message, StreamingConnection, Subscription, SubscriptionOptions}
 import org.slf4j.LoggerFactory
-
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 
 object NatsSubscriber {
   private val log = LoggerFactory.getLogger(NatsSubscriber.getClass)
@@ -31,7 +27,9 @@ object NatsSubscriber {
 }
 
 class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String) {
+
   import br.com.diego.processor.Main._
+
   log.info(s"Subscrevendo na fila $queue uid $uuid")
   val subscription = connection.subscribe(queue, (msg: Message) => {
     log.info(s"Recebeu mensagem $msg na fila $queue")

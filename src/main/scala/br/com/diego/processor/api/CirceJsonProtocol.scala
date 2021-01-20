@@ -1,6 +1,5 @@
 package br.com.diego.processor.api
 
-import br.com.diego.processor.domains.AgentState
 import io.circe.Decoder.Result
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.{Decoder, Encoder, HCursor, Json}
@@ -23,6 +22,7 @@ trait CirceJsonProtocol {
   }
 
   implicit def outcomeWsMessage[T: Encoder]: Encoder[OutcomeWsMessage[T]] = deriveEncoder
+
   implicit def incomeWsMessage[T: Decoder]: Decoder[OutcomeWsMessage[T]] = deriveDecoder
 
 }

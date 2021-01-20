@@ -1,8 +1,6 @@
 package br.com.diego.processor.api
 
 import akka.NotUsed
-import akka.actor.typed.pubsub.Topic
-import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.actor.typed.{ActorRef, Props, SpawnProtocol}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
@@ -36,7 +34,6 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
   import Directives._
   import br.com.diego.processor.Main._
   import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
-  import br.com.diego.processor.repo.PostgresProfile._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
@@ -155,7 +152,6 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
 
   private def wsUser(): Flow[Message, Message, NotUsed] = {
 
-    import io.circe.generic.auto._
     import io.circe.syntax._
 
     val wsUserFut: Future[ActorRef[WsUserActor.Command]] = system.ask(SpawnProtocol.Spawn(behavior = WsUserActor(), name = "", props = Props.empty, _))
@@ -164,7 +160,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
     val sink: Sink[Message, NotUsed] =
       Flow[Message].collect {
         case TextMessage.Strict(string) => {
-//          log.info("Recebido mensagem de texto {}", string)
+          //          log.info("Recebido mensagem de texto {}", string)
           IncomingMessage(string)
         }
       }
@@ -180,7 +176,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
       }, bufferSize = 8, overflowStrategy = OverflowStrategy.fail)
         .map {
           case c: OutcommingMessage => {
-//            log.info("Enviando mensagem {} para usuario", c.wsMessage.asJson.noSpaces)
+            //            log.info("Enviando mensagem {} para usuario", c.wsMessage.asJson.noSpaces)
             TextMessage.Strict(c.wsMessage.asJson.noSpaces)
           }
           case _ => {

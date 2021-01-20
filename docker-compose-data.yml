@@ -3,6 +3,8 @@ version: "3.5"
 services:
   postgres:
     image: postgres:13.1
+    networks:
+      - data_network
     ports:
       - '5432:5432'
     environment:
@@ -13,8 +15,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
   nats:
     image: nats-streaming
+    networks:
+      - data_network
     ports:
       - "4222:4222"
       - "8222:8222"
 volumes:
   postgres_data:
+networks:
+  data_network:

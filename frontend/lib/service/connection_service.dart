@@ -21,7 +21,7 @@ class ConnectionService extends BaseService<ConnectionStore> {
     if (!store().connected) {
       try {
         _channel?.sink?.close();
-        _channel = getConnectionFactory().connect('ws://${Api.HOST}/ws');
+        _channel = getConnectionFactory().connect(Api.getWsUrl());
         _channel.stream.listen((data) {
           print(data);
           dynamic result = json.decode(data);

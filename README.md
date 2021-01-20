@@ -20,18 +20,22 @@
 
 > You need to have the latest version of [Docker](https://www.docker.com/) installed to run this example
 
-OS X & Linux:
-
+One node:
 ```sh
+./build-container-image.sh
 ./run-all.sh
 ```
-
-Windows:
-```sh
-run-all.bat
-```
-
 Access [http://localhost:8081/](http://localhost:8081/)
+
+Multiple nodes:
+```sh
+./build-container-image.sh
+./run-data.sh
+./run-node0.sh
+./run-node1.sh
+./run-noden.sh
+```
+Access [http://localhost:8081/](http://localhost:8081/) and [http://localhost:8082/](http://localhost:8082/)
 
 ## Release History
 
