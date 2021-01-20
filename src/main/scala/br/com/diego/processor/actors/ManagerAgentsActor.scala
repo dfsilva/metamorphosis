@@ -89,7 +89,9 @@ object ManagerAgentsActor {
       }
 
       case SendAgentsDetails => {
+        log.info("Sending agent details {}", state.agents.size)
         state.agents.foreach(pw => {
+          log.info("Sending agent details {}", pw)
           val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, pw)
           entityRef ! AgentActor.SendDetails()
         })

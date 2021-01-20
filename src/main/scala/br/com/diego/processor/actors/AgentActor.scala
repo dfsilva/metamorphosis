@@ -15,7 +15,6 @@ import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
 import br.com.diego.processor.repo.{DeliveredMessage, DeliveredMessagesRepo}
-import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.nats.streaming.{Message, StreamingConnection}
@@ -94,11 +93,8 @@ object AgentActor {
   def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
 
     Behaviors.setup[Command] { context =>
-
       val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
-      val wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]] =
-        context.spawn(Topic[WsUserActor.OutcommingMessage](WsUserActor.TopicName), WsUserActor.TopicName)
-
+      val wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]] = context.spawn(Topic[WsUserActor.TopicMessage](WsUserActor.TopicName), WsUserActor.TopicName)
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("Processor", agentId),
         State.empty,
@@ -112,7 +108,7 @@ object AgentActor {
   private def handlerCommands(uuid: String, state: State, command: Command,
                               streamingConnection: StreamingConnection,
                               context: ActorContext[Command],
-                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]],
+                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]],
                               processActor: ActorRef[ProcessMessageActor.Command]): Effect[Event, State] = {
     command match {
 
@@ -127,7 +123,7 @@ object AgentActor {
       case StartSubscriber() => {
         log.info(s"Iniciando subscriber $uuid")
         Effect.persist(CleanProcessing()).thenReply(context.self)(updated => {
-          sendStateToUser(wsUserTopic, updated.agent.asJson)
+          sendStateToUser(wsUserTopic, updated.agent)
           NatsSubscriber(streamingConnection, state.agent.from, uuid)
           ProcessMessages()
         })
@@ -137,7 +133,7 @@ object AgentActor {
         log.info(s"Adicionando mensagem para processamento $message com codigo ${state.agent.dataScript}")
         Effect.persist(AddedToProcess(message))
           .thenReply(replyTo)(updated => {
-            sendStateToUser(wsUserTopic, updated.agent.asJson)
+            sendStateToUser(wsUserTopic, updated.agent)
             context.self ! ProcessMessages()
             AddToProcessResponse(natsMessage)
           })
@@ -150,7 +146,7 @@ object AgentActor {
           (state.agent.error ++ state.agent.waiting).headOption match {
             case Some(message) => {
               Effect.persist(Processing(message)).thenReply(context.self)(updated => {
-                sendStateToUser(wsUserTopic, updated.agent.asJson)
+                sendStateToUser(wsUserTopic, updated.agent)
                 ProcessMessage(message)
               })
             }
@@ -176,8 +172,8 @@ object AgentActor {
       }
 
       case SendDetails() => {
-        log.info(s"Enviando notificacao para usuairo")
-        wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = state.agent.asJson, action = "set-agent-detail")))
+        log.info("Enviando detalhes para o usuario")
+        wsUserTopic ! Topic.Publish(WsUserActor.TopicMessage(OutcomeWsMessage[AgentState](message = state.agent, action = "set-agent-detail")))
         Effect.none
       }
 
@@ -186,7 +182,6 @@ object AgentActor {
           case ProcessMessageActor.ProcessedSuccess(message) => {
             Effect.persist(ProcessedSuccessfull(message))
               .thenReply(context.self)(updated => {
-
                 val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
                 Await.result(database.run(DeliveredMessagesRepo.add(DeliveredMessage(
                   id = message.id,
@@ -199,23 +194,22 @@ object AgentActor {
                   fromQueue = state.agent.from,
                   agent = state.agent.uuid.get
                 ))), 5.seconds)
-
-                sendStateToUser(wsUserTopic, updated.agent.asJson)
+                sendStateToUser(wsUserTopic, updated.agent)
                 ProcessMessages()
               })
           }
           case ProcessMessageActor.ProcessedFailure(message, error) => {
             Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
               .thenReply(wsUserTopic)(updated => {
-                Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = updated.agent.asJson, action = "set-agent-detail")))
+                Topic.Publish(WsUserActor.TopicMessage(OutcomeWsMessage[AgentState](message = updated.agent, action = "set-agent-detail")))
               })
           }
         }
     }
   }
 
-  def sendStateToUser(wsUserTopic: ActorRef[Topic.Command[WsUserActor.OutcommingMessage]], json: Json): Unit = {
-    wsUserTopic ! Topic.Publish(WsUserActor.OutcommingMessage(OutcomeWsMessage(message = json, action = "set-agent-detail")))
+  def sendStateToUser(wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]], json: AgentState): Unit = {
+    wsUserTopic ! Topic.Publish(WsUserActor.TopicMessage(OutcomeWsMessage[AgentState](message = json, action = "set-agent-detail")))
   }
 
   private def handlerEvent(state: State, event: Event): State = {

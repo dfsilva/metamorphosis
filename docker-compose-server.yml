@@ -8,6 +8,7 @@ services:
       - nats:nats
     ports:
       - "8081:8081"
+      - "2551:2551"
     depends_on:
       - postgres
       - nats

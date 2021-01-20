@@ -67,7 +67,7 @@ class ConnectionService extends BaseService<ConnectionStore> {
 
     if (msg is WsConnected) {
       store().setConnected(true);
-      bus().send(SendWsMessage(message: OutcomeMessage(uuid: newUuid(), action: "get-processes")));
+      bus().send(SendWsMessage(message: OutcomeMessage(uuid: newUuid(), action: "get-processes")), seconds: 1);
     }
 
     if (msg is SendWsMessage) {

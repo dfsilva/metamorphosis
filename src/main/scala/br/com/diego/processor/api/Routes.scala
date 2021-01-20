@@ -1,6 +1,8 @@
 package br.com.diego.processor.api
 
 import akka.NotUsed
+import akka.actor.typed.pubsub.Topic
+import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.actor.typed.{ActorRef, Props, SpawnProtocol}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
@@ -162,7 +164,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
     val sink: Sink[Message, NotUsed] =
       Flow[Message].collect {
         case TextMessage.Strict(string) => {
-          log.info("Recebido mensagem de texto {}", string)
+//          log.info("Recebido mensagem de texto {}", string)
           IncomingMessage(string)
         }
       }
@@ -178,8 +180,8 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
       }, bufferSize = 8, overflowStrategy = OverflowStrategy.fail)
         .map {
           case c: OutcommingMessage => {
-            log.info("Enviando mensagem {} para usuario", c.message.asJson.noSpaces)
-            TextMessage.Strict(c.message.asJson.noSpaces)
+//            log.info("Enviando mensagem {} para usuario", c.wsMessage.asJson.noSpaces)
+            TextMessage.Strict(c.wsMessage.asJson.noSpaces)
           }
           case _ => {
             log.error("Mensagem nao reconhecida {}")
