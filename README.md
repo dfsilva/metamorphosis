@@ -20,14 +20,20 @@
 
 > You need to have the latest version of [Docker](https://www.docker.com/) installed to run this example
 
+### Linux/Unix
+
 One node:
 ```sh
 ./build-container-image.sh
 ./run-all.sh
 ```
 Access [http://localhost:8081/](http://localhost:8081/)
-
+Stop
+```sh
+./stop-all.sh
+```
 Multiple nodes:
+
 ```sh
 ./build-container-image.sh
 ./run-data.sh
@@ -35,7 +41,48 @@ Multiple nodes:
 ./run-node1.sh
 ./run-noden.sh
 ```
+
 Access [http://localhost:8081/](http://localhost:8081/) and [http://localhost:8082/](http://localhost:8082/)
+
+Stop
+
+```sh
+./stop-data.sh
+docker rm -f node00
+docker rm -f node01
+```
+
+### Windows
+
+One node:
+
+```sh
+build-container-image.bat
+run-all.bat
+```
+Access [http://localhost:8081/](http://localhost:8081/)
+
+Stop
+```sh
+stop-all.bat
+```
+
+Multiple nodes:
+```sh
+build-container-image.bat
+run-data.bat
+run-node0.bat
+run-node1.bat
+run-noden.bat
+```
+Access [http://localhost:8081/](http://localhost:8081/) and [http://localhost:8082/](http://localhost:8082/)
+
+Stop
+```sh
+./stop-data.sh
+docker rm -f node00
+docker rm -f node01
+```
 
 ## Release History
 

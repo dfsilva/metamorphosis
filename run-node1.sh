@@ -1,5 +1,4 @@
 #!/bin/bash
-#docker rm -f node01 && \
 docker run \
   --name node01 \
   --network metamorphosis_data_network \
