@@ -11,6 +11,7 @@ import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import br.com.diego.processor.CborSerializable
 import br.com.diego.processor.Main.system
+import br.com.diego.processor.actors.ProcessMessageActor.Command
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
@@ -50,9 +51,9 @@ object AgentActor {
 
   final case class StartSubscriber() extends Command
 
-  final case class AddToProcess(message: TopicMessage, natsMessage: Message, replyTo: ActorRef[Command]) extends Command
+  final case class AddToProcess(message: TopicMessage, replyTo: ActorRef[Command]) extends Command
 
-  final case class AddToProcessResponse(natsMessage: Message) extends Command
+  final case class AddToProcessResponse() extends Command
 
   final case class ProcessMessages() extends Command
 
@@ -62,7 +63,9 @@ object AgentActor {
 
   final case class SendDetails() extends Command
 
-  final case class ProcessMessageResponse(response: ProcessMessageActor.Command) extends Command
+  final case class ProcessedSuccess(msg: TopicMessage) extends Command
+
+  final case class ProcessedFailureCmd(msg: TopicMessage, error: Throwable) extends Command
 
   sealed trait Event extends CborSerializable
 
@@ -91,14 +94,15 @@ object AgentActor {
   }
 
   def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
+    log.info("Creating agent {}..........", agentId)
 
     Behaviors.setup[Command] { context =>
-      val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
+//      val processActor: ActorRef[ProcessMessageActor.Command] = context.messageAdapter(rsp => ProcessMessageResponse(rsp))
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]] = context.spawn(Topic[WsUserActor.TopicMessage](WsUserActor.TopicName), WsUserActor.TopicName)
       EventSourcedBehavior[Command, Event, State](
         PersistenceId("Processor", agentId),
         State.empty,
-        (state, command) => handlerCommands(agentId, state, command, streamingConnection, context, wsUserTopic, processActor),
+        (state, command) => handlerCommands(agentId, state, command, streamingConnection, context, wsUserTopic),
         (state, event) => handlerEvent(state, event))
         .withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 5, keepNSnapshots = 3))
         .onPersistFailure(SupervisorStrategy.restartWithBackoff(200.millis, 5.seconds, randomFactor = 0.1))
@@ -108,8 +112,7 @@ object AgentActor {
   private def handlerCommands(uuid: String, state: State, command: Command,
                               streamingConnection: StreamingConnection,
                               context: ActorContext[Command],
-                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]],
-                              processActor: ActorRef[ProcessMessageActor.Command]): Effect[Event, State] = {
+                              wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]]): Effect[Event, State] = {
     command match {
 
       case Create(agent, replyTo, replyTo2) =>
@@ -129,13 +132,13 @@ object AgentActor {
         })
       }
 
-      case AddToProcess(message, natsMessage, replyTo) => {
+      case AddToProcess(message, replyTo) => {
         log.info(s"Adicionando mensagem para processamento $message com codigo ${state.agent.dataScript}")
         Effect.persist(AddedToProcess(message))
           .thenReply(replyTo)(updated => {
             sendStateToUser(wsUserTopic, updated.agent)
             context.self ! ProcessMessages()
-            AddToProcessResponse(natsMessage)
+            AddToProcessResponse()
           })
       }
 
@@ -159,7 +162,7 @@ object AgentActor {
 
       case ProcessMessage(message) => {
         log.info(s"Processing message $message")
-        context.spawn(ProcessMessageActor(streamingConnection), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessageStep1(message, state.agent.dataScript, state.agent.ifscript, state.agent.to, state.agent.to2, processActor)
+        context.spawn(ProcessMessageActor(streamingConnection), s"process-message-${message.id}") ! ProcessMessageActor.ProcessMessageStep1(message, state.agent.dataScript, state.agent.ifscript, state.agent.to, state.agent.to2, uuid)
         if (!state.agent.ordered) {
           log.info(s"Agente não ordenado $message")
           Effect.reply(context.self)(ProcessMessages())
@@ -177,34 +180,33 @@ object AgentActor {
         Effect.none
       }
 
-      case processActor: ProcessMessageResponse =>
-        processActor.response match {
-          case ProcessMessageActor.ProcessedSuccess(message) => {
-            Effect.persist(ProcessedSuccessfull(message))
-              .thenReply(context.self)(updated => {
-                val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
-                Await.result(database.run(DeliveredMessagesRepo.add(DeliveredMessage(
-                  id = message.id,
-                  content = message.content,
-                  ifResult = message.ifResult.getOrElse(""),
-                  result = message.result.getOrElse(""),
-                  created = message.created,
-                  processed = message.processed.getOrElse(0),
-                  deliveredTo = message.deliveredTo,
-                  fromQueue = state.agent.from,
-                  agent = state.agent.uuid.get
-                ))), 5.seconds)
-                sendStateToUser(wsUserTopic, updated.agent)
-                ProcessMessages()
-              })
-          }
-          case ProcessMessageActor.ProcessedFailure(message, error) => {
-            Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
-              .thenReply(wsUserTopic)(updated => {
-                Topic.Publish(WsUserActor.TopicMessage(OutcomeWsMessage[AgentState](message = updated.agent, action = "set-agent-detail")))
-              })
-          }
-        }
+      case ProcessedSuccess(message) => {
+        Effect.persist(ProcessedSuccessfull(message))
+          .thenReply(context.self)(updated => {
+            val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
+            Await.result(database.run(DeliveredMessagesRepo.add(DeliveredMessage(
+              id = message.id,
+              content = message.content,
+              ifResult = message.ifResult.getOrElse(""),
+              result = message.result.getOrElse(""),
+              created = message.created,
+              processed = message.processed.getOrElse(0),
+              deliveredTo = message.deliveredTo,
+              fromQueue = state.agent.from,
+              agent = state.agent.uuid.get
+            ))), 5.seconds)
+            sendStateToUser(wsUserTopic, updated.agent)
+            ProcessMessages()
+          })
+      }
+
+      case ProcessedFailureCmd(message, error) => {
+        Effect.persist(ProcessedFailure(message.copy(result = Some(error.getMessage)), error))
+          .thenReply(wsUserTopic)(updated => {
+            Topic.Publish(WsUserActor.TopicMessage(OutcomeWsMessage[AgentState](message = updated.agent, action = "set-agent-detail")))
+          })
+      }
+
     }
   }
 

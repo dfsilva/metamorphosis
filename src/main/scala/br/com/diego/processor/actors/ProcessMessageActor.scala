@@ -1,8 +1,10 @@
 package br.com.diego.processor.actors
 
+import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import br.com.diego.processor.CborSerializable
+import br.com.diego.processor.actors.AgentActor.{ProcessedFailureCmd, ProcessedSuccess}
 import br.com.diego.processor.domains.TopicMessage
 import br.com.diego.processor.nats.NatsPublisher
 import br.com.diego.processor.proccess.RuntimeProcessor
@@ -23,16 +25,13 @@ object ProcessMessageActor {
                                        ifscript: Option[String],
                                        to: Option[String],
                                        to2: Option[String],
-                                       replyTo: ActorRef[Command]) extends Command
+                                       replyToAgentId: String) extends Command
 
   final case class ProcessMessageStep2(msg: TopicMessage,
                                        script: String,
                                        to: Option[String],
                                        to2: Option[String],
-                                       replyTo: ActorRef[Command]) extends Command
-
-  final case class ProcessedSuccess(msg: TopicMessage) extends Command
-  final case class ProcessedFailure(msg: TopicMessage, error: Throwable) extends Command
+                                       replyToAgentId: String) extends Command
 
 
   def apply(streamingConnection: StreamingConnection): Behavior[ProcessMessageActor.Command] = Behaviors.setup { context =>
@@ -50,7 +49,8 @@ object ProcessMessageActor {
               }
               case Failure(error) => {
                 log.error(s"IF script processado com falha ${error.getMessage}")
-                replyTo ! ProcessedFailure(message.copy(ifResult = Some(error.getMessage)), error)
+                val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, replyTo)
+                entityRef ! ProcessedFailureCmd(message.copy(ifResult = Some(error.getMessage)), error)
                 Behaviors.stopped
               }
             }
@@ -68,16 +68,17 @@ object ProcessMessageActor {
             log.info(s"Processado com sucesso $result")
             val msg = message.copy(result = Some(result), deliveredTo = _getDeliverTo(message, to, to2), processed = Some(new Date().getTime))
 
-            if(msg.deliveredTo.isDefined){
+            if (msg.deliveredTo.isDefined) {
               NatsPublisher(streamingConnection, msg.deliveredTo.get, result)
             }
-
-            replyTo ! ProcessedSuccess(msg)
+            val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, replyTo)
+            entityRef ! ProcessedSuccess(msg)
             Behaviors.stopped
           }
           case Failure(error) => {
             log.error(s"Processado com falha ${error.getMessage}")
-            replyTo ! ProcessedFailure(message, error)
+            val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, replyTo)
+            entityRef ! ProcessedFailureCmd(message, error)
             Behaviors.stopped
           }
         }

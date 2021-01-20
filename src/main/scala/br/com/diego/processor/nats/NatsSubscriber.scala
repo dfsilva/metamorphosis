@@ -31,14 +31,10 @@ object NatsSubscriber {
 }
 
 class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String) {
-
   import br.com.diego.processor.Main._
-
   log.info(s"Subscrevendo na fila $queue uid $uuid")
   val subscription = connection.subscribe(queue, (msg: Message) => {
     log.info(s"Recebeu mensagem $msg na fila $queue")
-    val wsUserFut: Future[ActorRef[ReceiveMessageActor.Command]] = system.ask(SpawnProtocol.Spawn(behavior = ReceiveMessageActor(uuid), name = "", props = Props.empty, _))
-    val receiveMessageActor = Await.result(wsUserFut, Duration.Inf)
-    receiveMessageActor ! ReceiveMessageActor.ReceiveMessage(msg)
+    system.tell(SpawnProtocol.Spawn(behavior = ReceiveMessageActor(uuid, msg), name = "", props = Props.empty, system.ignoreRef))
   }, new SubscriptionOptions.Builder().durableName(s"durable_$uuid").manualAcks().build())
 }

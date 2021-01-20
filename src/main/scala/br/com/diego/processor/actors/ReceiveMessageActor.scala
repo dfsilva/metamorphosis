@@ -20,22 +20,18 @@ object ReceiveMessageActor {
 
   final case class AgentResponse(response: AgentActor.Command) extends Command
 
-  def apply(agentUid: String): Behavior[ReceiveMessageActor.Command] = Behaviors.setup { context =>
+  def apply(agentUid: String, msg: Message): Behavior[ReceiveMessageActor.Command] = Behaviors.setup { context =>
     val adapter: ActorRef[AgentActor.Command] = context.messageAdapter(rsp => AgentResponse(rsp))
+
+    val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, agentUid)
+    entityRef ! AgentActor.AddToProcess(message = TopicMessage(id = msg.getSequence.toString, content = new String(msg.getData), created = new Date().getTime), replyTo = adapter)
+
     Behaviors.receiveMessage[ReceiveMessageActor.Command] {
-      case ReceiveMessage(msg) => {
-        log.info(s"Receiving message ${msg.getSequence}")
-        val entityRef = ClusterSharding(context.system).entityRefFor(AgentActor.EntityKey, agentUid)
-        entityRef ! AgentActor.AddToProcess(message = TopicMessage(id = msg.getSequence.toString, content = new String(msg.getData), created = new Date().getTime),
-          natsMessage = msg,
-          replyTo = adapter)
-        Behaviors.same
-      }
       case response: AgentResponse =>
         response.response match {
-          case AgentActor.AddToProcessResponse(natsMessage) => {
-            log.info(s"Message added ${natsMessage.getSequence}")
-            natsMessage.ack()
+          case AgentActor.AddToProcessResponse() => {
+            log.info(s"Message added ${msg.getSequence}")
+            msg.ack()
             Behaviors.stopped
           }
         }
@@ -43,7 +39,6 @@ object ReceiveMessageActor {
       case (context, PostStop) =>
         context.log.info(s"Receive message actor stopped ${agentUid}")
         Behaviors.same
-
     }
   }
 
