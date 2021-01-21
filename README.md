@@ -1,5 +1,5 @@
 # Metamorphosis
-> Metamorphosis is a software that makes easy to manage lots of topics on nats.
+> Metamorphosis allows you to connect on nats topics, create agents to transform the data and make decisions using Groovy Script.
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
@@ -8,6 +8,11 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
+##Features
+
+* Transform data from a topic using dynamic script
+* Make decisions where the message will be delivered after the transformation using a second dynamic script
+* Configure if the messages will be processed ordered or not.
 
 <table border="0">
  <tr>
