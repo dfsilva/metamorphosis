@@ -32,9 +32,9 @@ class Api {
       );
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        return json.decode(utf8.decode(response.bodyBytes));
       } else {
-        handleError(Exception(response.body));
+        return handleError(Exception(utf8.decode(response.bodyBytes)));
       }
     } catch (e) {
       handleError(e);
@@ -50,23 +50,25 @@ class Api {
     );
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return json.decode(utf8.decode(response.bodyBytes));
     } else {
-      handleError(Exception(response.body));
+      return handleError(Exception(utf8.decode(response.bodyBytes)));
     }
   }
 
   static Future<dynamic> doGet({String url, String uri, Map<String, dynamic> params = const {}}) async {
     String currentToken = await _getUserToken();
     final response = await http.get(
-      (url ?? getApiUrl()) + uri + params.entries.fold("?", (previousValue, element) => previousValue + "${element.key}=${element.value}"),
+      (url ?? getApiUrl()) + uri + params.entries
+          .where((entry) => (entry.value != null && entry.value.toString().isNotEmpty))
+          .fold("?", (previousValue, element) => previousValue + "${element.key}=${element.value}&"),
       headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', "Authorization": "Token $currentToken"},
     );
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return json.decode(utf8.decode(response.bodyBytes));
     } else {
-      handleError(Exception(response.body));
+      return handleError(Exception(utf8.decode(response.bodyBytes)));
     }
   }
 
