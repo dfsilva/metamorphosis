@@ -12,8 +12,8 @@ resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= {
   val akka = "com.typesafe.akka"
-  val akkaV = "2.6.10"
-  val akkaHttpV = "10.2.1"
+  val akkaV = "2.6.12"
+  val akkaHttpV = "10.2.3"
   val circeVersion = "0.13.0"
   val slickVersion = "3.3.2"
   Seq(
