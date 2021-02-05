@@ -25,7 +25,7 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
 object Routes {
-  def apply() = new Routes()
+  def apply() = new Routes().routes
 }
 
 class Routes() extends FailFastCirceSupport with CirceJsonProtocol {

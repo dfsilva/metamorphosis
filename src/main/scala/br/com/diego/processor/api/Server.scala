@@ -9,6 +9,11 @@ import akka.{Done, actor => classic}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
+object Server{
+  def apply(routes: Route, port: Int, system: ActorSystem[_]): Server = new Server(routes, port, system)
+}
+
+
 class Server(routes: Route, port: Int, system: ActorSystem[_]) {
 
   import akka.actor.typed.scaladsl.adapter._
