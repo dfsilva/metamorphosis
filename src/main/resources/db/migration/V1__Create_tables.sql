@@ -1,4 +1,4 @@
-CREATE TABLE database_streamer.event_journal
+CREATE TABLE metamorphosis.event_journal
 (
     "ordering"         bigserial    NOT NULL,
     persistence_id     varchar(255) NOT NULL,
@@ -15,10 +15,10 @@ CREATE TABLE database_streamer.event_journal
     meta_payload       bytea        NULL,
     CONSTRAINT event_journal_pkey PRIMARY KEY (persistence_id, sequence_number)
 );
-CREATE UNIQUE INDEX event_journal_ordering_idx ON database_streamer.event_journal USING btree (ordering);
+CREATE UNIQUE INDEX event_journal_ordering_idx ON metamorphosis.event_journal USING btree (ordering);
 
 
-CREATE TABLE database_streamer.snapshot
+CREATE TABLE metamorphosis.snapshot
 (
     persistence_id        varchar(255) NOT NULL,
     sequence_number       int8         NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE database_streamer.snapshot
     CONSTRAINT snapshot_pkey PRIMARY KEY (persistence_id, sequence_number)
 );
 
-CREATE TABLE IF NOT EXISTS public.delivered_messages
+CREATE TABLE IF NOT EXISTS metamorphosis.delivered_messages
 (
     id          VARCHAR(255),
     content     text,
