@@ -93,7 +93,6 @@ object AgentActor {
 
   def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
     log.info("Creating agent {}..........", agentId)
-
     Behaviors.setup[Command] { context =>
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]] = context.spawn(Topic[WsUserActor.TopicMessage](WsUserActor.TopicName), WsUserActor.TopicName)
       EventSourcedBehavior[Command, Event, State](

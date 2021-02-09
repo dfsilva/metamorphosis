@@ -15,7 +15,7 @@ libraryDependencies ++= {
   val akkaV = "2.6.12"
   val akkaHttpV = "10.2.3"
   val circeVersion = "0.13.0"
-  val slickVersion = "3.3.2"
+  val slickVersion = "3.3.3"
   Seq(
     akka %% "akka-actor-typed" % akkaV,
     akka %% "akka-stream-typed" % akkaV,
@@ -24,13 +24,13 @@ libraryDependencies ++= {
     akka %% "akka-serialization-jackson" % akkaV,
     akka %% "akka-persistence-typed" % akkaV,
     akka %% "akka-persistence-query" % akkaV,
-    "com.lightbend.akka" %% "akka-persistence-jdbc" % "4.0.0",
+    "com.lightbend.akka" %% "akka-persistence-jdbc" % "5.0.0",
     "com.typesafe.slick" %% "slick" % slickVersion,
     "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
     "com.github.tminglei" %% "slick-pg" % "0.19.4",
     "com.github.tminglei" %% "slick-pg_circe-json" % "0.19.4",
 
-    "org.flywaydb" % "flyway-core" % "7.2.0",
+    "org.flywaydb" % "flyway-core" % "7.5.2",
     "org.postgresql" % "postgresql" % "42.2.18",
 
     akka %% "akka-slf4j" % akkaV,
@@ -42,9 +42,9 @@ libraryDependencies ++= {
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
 
-    "de.heikoseeberger" %% "akka-http-circe" % "1.35.2",
+    "de.heikoseeberger" %% "akka-http-circe" % "1.35.3",
 
-    "ch.megard" %% "akka-http-cors" % "1.1.0",
+    "ch.megard" %% "akka-http-cors" % "1.1.1",
     "io.nats" % "java-nats-streaming" % "2.2.3",
 
     "org.codehaus.groovy" % "groovy-all" % "3.0.7" pomOnly()
@@ -68,7 +68,6 @@ assemblyMergeStrategy in assembly := {
         MergeStrategy.filterDistinctLines
       case _ => MergeStrategy.discard
     }
-  //  case PathList("META-INF/services/io.grpc.ManagedChannelProvider") => MergeStrategy.first
   case PathList("reference.conf") => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
