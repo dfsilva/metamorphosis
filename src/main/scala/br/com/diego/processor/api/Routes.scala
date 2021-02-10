@@ -4,9 +4,13 @@ import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.actor.typed.{ActorRef, Props, SpawnProtocol}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
+import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.StatusCodes.InternalServerError
+import akka.http.scaladsl.model.headers.{`Access-Control-Allow-Credentials`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Origin`}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server._
 import akka.http.scaladsl.util.FastFuture
 import akka.pattern.StatusReply
 import akka.persistence.jdbc.db.SlickExtension
@@ -24,16 +28,41 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, Future}
 
+trait CORSHandler {
+
+  private val corsResponseHeaders = List(
+    `Access-Control-Allow-Origin`.*,
+    `Access-Control-Allow-Credentials`(true),
+    `Access-Control-Allow-Headers`("Authorization",
+      "Content-Type", "X-Requested-With")
+  )
+
+  private def addAccessControlHeaders: Directive0 = {
+    respondWithHeaders(corsResponseHeaders)
+  }
+
+  private def preflightRequestHandler: Route = options {
+    complete(HttpResponse(StatusCodes.OK).
+      withHeaders(`Access-Control-Allow-Methods`(OPTIONS, POST, PUT, GET, DELETE)))
+  }
+
+  def corsHandler(r: Route): Route = addAccessControlHeaders {
+    preflightRequestHandler ~ r
+  }
+
+  def addCORSHeaders(response: HttpResponse): HttpResponse =
+    response.withHeaders(corsResponseHeaders)
+
+}
+
 object Routes {
   def apply() = new Routes().routes
 }
 
-class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
+class Routes() extends FailFastCirceSupport with CirceJsonProtocol with CORSHandler {
 
-  import akka.http.scaladsl.server._
-  import Directives._
+
   import br.com.diego.processor.Main._
-  import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)
@@ -55,7 +84,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
           log.info("criando o websocket")
           handleWebSocketMessages(wsUser())
         },
-        cors() {
+        corsHandler(
           pathPrefix("api") {
             concat(
               pathPrefix("agent") {
@@ -139,7 +168,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol {
               },
             )
           }
-        },
+        ),
         get {
           (pathEndOrSingleSlash & redirectToTrailingSlashIfMissing(StatusCodes.TemporaryRedirect)) {
             getFromResource("web/index.html")

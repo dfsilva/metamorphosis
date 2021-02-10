@@ -44,7 +44,6 @@ libraryDependencies ++= {
 
     "de.heikoseeberger" %% "akka-http-circe" % "1.35.3",
 
-    "ch.megard" %% "akka-http-cors" % "1.1.1",
     "io.nats" % "java-nats-streaming" % "2.2.3",
 
     "org.codehaus.groovy" % "groovy-all" % "3.0.7" pomOnly()
