@@ -28,7 +28,7 @@ object NatsSubscriber {
 
 class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String) {
 
-  import br.com.diego.processor.Main._
+  import br.com.diego.processor.Metamorphosis._
 
   log.info(s"Subscrevendo na fila $queue uid $uuid")
   val subscription = connection.subscribe(queue, (msg: Message) => {

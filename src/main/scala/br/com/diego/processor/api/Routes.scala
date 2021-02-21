@@ -62,7 +62,7 @@ object Routes {
 class Routes() extends FailFastCirceSupport with CirceJsonProtocol with CORSHandler {
 
 
-  import br.com.diego.processor.Main._
+  import br.com.diego.processor.Metamorphosis._
   import io.circe.generic.auto._
 
   private lazy val log = LoggerFactory.getLogger(getClass)

@@ -10,7 +10,7 @@ import akka.persistence.jdbc.db.SlickExtension
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import br.com.diego.processor.CborSerializable
-import br.com.diego.processor.Main.system
+import br.com.diego.processor.Metamorphosis.system
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
