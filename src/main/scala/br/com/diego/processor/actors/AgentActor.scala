@@ -9,8 +9,7 @@ import akka.pattern.StatusReply
 import akka.persistence.jdbc.db.SlickExtension
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
-import br.com.diego.processor.CborSerializable
-import br.com.diego.processor.Metamorphosis.system
+import br.com.diego.processor.{CborSerializable, Metamorphosis}
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
 import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
@@ -123,7 +122,7 @@ object AgentActor {
         log.info(s"Iniciando subscriber $uuid")
         Effect.persist(CleanProcessing()).thenReply(context.self)(updated => {
           sendStateToUser(wsUserTopic, updated.agent)
-          NatsSubscriber(streamingConnection, state.agent.from, uuid)
+          NatsSubscriber(streamingConnection, state.agent.from, uuid)(Metamorphosis.system)
           ProcessMessages()
         })
       }
@@ -179,7 +178,7 @@ object AgentActor {
       case ProcessedSuccessResponse(message) => {
         Effect.persist(ProcessedSuccess(message))
           .thenReply(context.self)(updated => {
-            val database = SlickExtension(system).database(system.settings.config.getConfig("jdbc-journal")).database
+            val database = SlickExtension(context.system).database(context.system.settings.config.getConfig("jdbc-journal")).database
             Await.result(database.run(DeliveredMessagesRepo.add(DeliveredMessage(
               id = message.id,
               content = message.content,

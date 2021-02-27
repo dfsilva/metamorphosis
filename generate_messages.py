@@ -1,5 +1,5 @@
 # pip install asyncio-nats-streaming
-# Call using python3 generate_messages.py 1 topic1 "{"nome":"Auto de teste"}"
+# Call using python3 generate_messages.py 1 topic1 '{"nome":"Auto de teste"}'
 
 import asyncio
 import sys

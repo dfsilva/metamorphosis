@@ -1,6 +1,6 @@
 package br.com.diego.processor.nats
 
-import akka.actor.typed.{Props, SpawnProtocol}
+import akka.actor.typed.{ActorSystem, Props, SpawnProtocol}
 import br.com.diego.processor.actors.ReceiveMessageActor
 import br.com.diego.processor.nats.NatsSubscriber.log
 import io.nats.streaming.{Message, StreamingConnection, Subscription, SubscriptionOptions}
@@ -12,7 +12,7 @@ object NatsSubscriber {
 
   def apply(connection: StreamingConnection,
             queue: String,
-            uuid: String): NatsSubscriber = {
+            uuid: String)(implicit system: ActorSystem[SpawnProtocol.Command]): NatsSubscriber = {
     if (subscribers.contains(uuid)) {
       subscribers(uuid).unsubscribe()
       val subscriber = new NatsSubscriber(connection, queue, uuid)
@@ -26,9 +26,7 @@ object NatsSubscriber {
   }
 }
 
-class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String) {
-
-  import br.com.diego.processor.Metamorphosis._
+class NatsSubscriber(connection: StreamingConnection, queue: String, uuid: String)(implicit system: ActorSystem[SpawnProtocol.Command]) {
 
   log.info(s"Subscrevendo na fila $queue uid $uuid")
   val subscription = connection.subscribe(queue, (msg: Message) => {
