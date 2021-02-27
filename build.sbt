@@ -2,7 +2,7 @@ import sbtassembly.MergeStrategy
 
 name := "metamorphosis"
 organization := "br.com.diegosilva"
-version := "0.0.1"
+version := "0.0.2"
 scalaVersion := "2.13.4"
 
 enablePlugins(DockerPlugin)
@@ -43,7 +43,7 @@ libraryDependencies ++= {
 
     "de.heikoseeberger" %% "akka-http-circe" % "1.35.3",
 
-    "io.nats" % "java-nats-streaming" % "2.2.3",
+    "br.com.diego.silva" % "nats-stream-sdk" % "1.0-SNAPSHOT",
 
     "org.codehaus.groovy" % "groovy-all" % "3.0.7" pomOnly()
   )

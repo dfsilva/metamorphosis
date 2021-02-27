@@ -8,6 +8,7 @@ import br.com.diego.processor.actors.AgentActor.{ProcessedFailureResponse, Proce
 import br.com.diego.processor.domains.TopicMessage
 import br.com.diego.processor.nats.NatsPublisher
 import br.com.diego.processor.proccess.RuntimeProcessor
+import br.com.diego.silva.nats.NatsStreamConnectionWrapper
 import io.nats.streaming.StreamingConnection
 import org.slf4j.LoggerFactory
 
@@ -34,7 +35,7 @@ object ProcessMessageActor {
                                        replyToAgentId: String) extends Command
 
 
-  def apply(streamingConnection: StreamingConnection): Behavior[ProcessMessageActor.Command] = Behaviors.setup { context =>
+  def apply(streamingConnection: NatsStreamConnectionWrapper): Behavior[ProcessMessageActor.Command] = Behaviors.setup { context =>
 
     Behaviors.receiveMessage[ProcessMessageActor.Command] {
       case ProcessMessageStep1(message, script, ifscript, to, to2, replyTo) => {

@@ -19,7 +19,7 @@ import br.com.diego.processor.Metamorphosis._
 import br.com.diego.processor.actors.WsUserActor._
 import br.com.diego.processor.actors.{AgentActor, ManagerAgentsActor, WsUserActor}
 import br.com.diego.processor.domains.{ActorResponse, AgentState}
-import br.com.diego.processor.nats.{NatsConnectionExtension, NatsPublisher}
+import br.com.diego.processor.nats.{NatsExtension, NatsPublisher}
 import br.com.diego.processor.repo.DeliveredMessagesRepo
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import org.slf4j.LoggerFactory
@@ -131,7 +131,7 @@ class Routes() extends FailFastCirceSupport with CirceJsonProtocol with CorsHand
                 concat(
                   post {
                     entity(as[PublishNats]) { data =>
-                      complete(FastFuture.successful(NatsPublisher(NatsConnectionExtension(system).connection(), data.topic, data.content)))
+                      complete(FastFuture.successful(NatsPublisher(NatsExtension(system).connection(), data.topic, data.content)))
                     }
                   },
                 )

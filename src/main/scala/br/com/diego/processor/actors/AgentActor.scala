@@ -12,7 +12,8 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionC
 import br.com.diego.processor.{CborSerializable, Metamorphosis}
 import br.com.diego.processor.api.OutcomeWsMessage
 import br.com.diego.processor.domains.{ActorResponse, AgentState, TopicMessage}
-import br.com.diego.processor.nats.{NatsConnectionExtension, NatsSubscriber}
+import br.com.diego.processor.nats.{NatsExtension, NatsSubscriber}
+import br.com.diego.silva.nats.NatsStreamConnectionWrapper
 import br.com.diego.processor.repo.{DeliveredMessage, DeliveredMessagesRepo}
 import io.nats.streaming.StreamingConnection
 import org.slf4j.LoggerFactory
@@ -85,12 +86,12 @@ object AgentActor {
   def init(system: ActorSystem[_]): Unit = {
     ClusterSharding(system).init(Entity(EntityKey) { entityContent =>
       Behaviors
-        .supervise(AgentActor(entityContent.entityId, NatsConnectionExtension(system).connection()))
+        .supervise(AgentActor(entityContent.entityId, NatsExtension(system).connection()))
         .onFailure[Exception](SupervisorStrategy.restart)
     })
   }
 
-  def apply(agentId: String, streamingConnection: StreamingConnection): Behavior[Command] = {
+  def apply(agentId: String, streamingConnection: NatsStreamConnectionWrapper): Behavior[Command] = {
     log.info("Creating agent {}..........", agentId)
     Behaviors.setup[Command] { context =>
       val wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]] = context.spawn(Topic[WsUserActor.TopicMessage](WsUserActor.TopicName), WsUserActor.TopicName)
@@ -105,7 +106,7 @@ object AgentActor {
   }
 
   private def handlerCommands(uuid: String, state: State, command: Command,
-                              streamingConnection: StreamingConnection,
+                              streamingConnection: NatsStreamConnectionWrapper,
                               context: ActorContext[Command],
                               wsUserTopic: ActorRef[Topic.Command[WsUserActor.TopicMessage]]): Effect[Event, State] = {
     command match {
