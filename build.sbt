@@ -11,8 +11,8 @@ resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= {
   val akka = "com.typesafe.akka"
-  val akkaV = "2.6.12"
-  val akkaHttpV = "10.2.3"
+  val akkaV = "2.6.14"
+  val akkaHttpV = "10.2.4"
   val circeVersion = "0.13.0"
   val slickVersion = "3.3.3"
   Seq(
@@ -26,11 +26,11 @@ libraryDependencies ++= {
     "com.lightbend.akka" %% "akka-persistence-jdbc" % "5.0.0",
     "com.typesafe.slick" %% "slick" % slickVersion,
     "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
-    "com.github.tminglei" %% "slick-pg" % "0.19.4",
-    "com.github.tminglei" %% "slick-pg_circe-json" % "0.19.4",
+    "com.github.tminglei" %% "slick-pg" % "0.19.6",
+    "com.github.tminglei" %% "slick-pg_circe-json" % "0.19.6",
 
-    "org.flywaydb" % "flyway-core" % "7.5.2",
-    "org.postgresql" % "postgresql" % "42.2.18",
+    "org.flywaydb" % "flyway-core" % "7.8.2",
+    "org.postgresql" % "postgresql" % "42.2.20",
 
     akka %% "akka-slf4j" % akkaV,
     akka %% "akka-http" % akkaHttpV,
@@ -41,11 +41,11 @@ libraryDependencies ++= {
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
 
-    "de.heikoseeberger" %% "akka-http-circe" % "1.35.3",
+    "de.heikoseeberger" %% "akka-http-circe" % "1.36.0",
 
     "io.nats" % "java-nats-streaming" % "2.2.3",
 
-    "org.codehaus.groovy" % "groovy-all" % "3.0.7" pomOnly()
+    "org.codehaus.groovy" % "groovy-all" % "3.0.8" pomOnly()
   )
 }
 
