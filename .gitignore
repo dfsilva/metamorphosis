@@ -33,3 +33,8 @@ build
 #general
 *.class
 cassandra/
+.bsp
+null
+.bloop
+.metals
+/*.bloop
